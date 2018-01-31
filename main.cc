@@ -87,6 +87,8 @@ void UnlimitedRateApp::SendData(void)
 	// some buffer space has freed ip.
 	for (;;) {
 		ns3::Ptr<ns3::Packet> packet = ns3::Create<ns3::Packet>(m_packetSize);
+		// set header
+		// TODO VP-1: set packet
 		int actual = m_socket->Send(packet);
 		if ((unsigned) actual != m_packetSize) 
 		{
@@ -123,7 +125,7 @@ int main (int argc, char *argv[])
 	std::string access_bandwidth = "100Mbps";
 	std::string access_delay = "20ms";
 
-	std::string bottleneck_bandwidth = "10Mbps";
+	std::string bottleneck_bandwidth = "10kbps";
 	std::string bottleneck_delay = "20ms";
 
 	ns3::Time::SetResolution (ns3::Time::NS);
@@ -142,6 +144,7 @@ int main (int argc, char *argv[])
 
 	// // Creating Nodes
 	ns3::NodeContainer routers;
+	// TODO VP-3: add an APP
 	ns3::Ptr<ns3::Node> leftrouter = ns3::CreateObject<ns3::Node>();
 	routers.Add(leftrouter);
 	ns3::Ptr<ns3::Node> rightrouter = ns3::CreateObject<ns3::Node>();
@@ -216,7 +219,7 @@ int main (int argc, char *argv[])
 	for ( int i = 0; i < number_of_clients; ++i)
 	{
 		ns3::Ptr<ns3::Socket> sockptr;
-		unsigned int pkgsize = 1024;
+		unsigned int pkgsize = 512;
 		float start = 2.0;
 		// APP = UR, TCP, 1024, 2.0
 		// TCP flow
@@ -229,7 +232,7 @@ int main (int argc, char *argv[])
 		// std::string prefix = "/NodeList/" + nodeidss.str();
 
 		sinkApps.Add(TcpPacketSinkHelper.Install(rightleaves.Get(i)));
-		float stop = 10.0;
+		float stop = 60.0;
 
 		ns3::Ptr<UnlimitedRateApp> app = ns3::CreateObject<UnlimitedRateApp> ();;
 		app->Setup(sockptr, ns3::InetSocketAddress(rightleafifs.GetAddress(i), port), pkgsize);
@@ -238,10 +241,15 @@ int main (int argc, char *argv[])
 		app->SetStopTime(ns3::Seconds(stop));
 	}
 
+	// TODO VP-1: check header / header
 	sinkApps.Start(ns3::Seconds(0.0));
+
+	// TODO VP-2: populate manually
 	ns3::Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
-	float simstop = 20.0;
+	leafLink.EnablePcapAll("VP_", true);
+
+	float simstop = 60.0;
 	if (simstop > 0.0) {
 		ns3::Simulator::Stop(ns3::Seconds(simstop));
 	}
