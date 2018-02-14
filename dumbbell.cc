@@ -87,8 +87,11 @@ void UnlimitedRateApp::SendData(void)
 	// some buffer space has freed ip.
 	for (;;) {
 		ns3::Ptr<ns3::Packet> packet = ns3::Create<ns3::Packet>(m_packetSize);
-		// set header
 		// TODO VP-1: set packet
+		ns3::Ipv4Header header;
+		packet->RemoveHeader(header);
+		header.SetDscp(ns3::Ipv4Header::DscpType::DSCP_CS4);
+		packet->AddHeader(header);
 		int actual = m_socket->Send(packet);
 		if ((unsigned) actual != m_packetSize) 
 		{
@@ -119,13 +122,13 @@ int main (int argc, char *argv[])
 	ns3::CommandLine cmd;
 	cmd.Parse (argc, argv);
 
-	int number_of_clients = 1;
+	int number_of_clients = 3;
 	int port = 9000;
 
 	std::string access_bandwidth = "100Mbps";
 	std::string access_delay = "20ms";
 
-	std::string bottleneck_bandwidth = "10kbps";
+	std::string bottleneck_bandwidth ="10Mbps";
 	std::string bottleneck_delay = "20ms";
 
 	ns3::Time::SetResolution (ns3::Time::NS);
@@ -180,9 +183,9 @@ int main (int argc, char *argv[])
 	stack.Install(leftleaves);
 	stack.Install(rightleaves);
 
-	ns3::Ipv4AddressHelper routerips = ns3::Ipv4AddressHelper("10.1.3.0", "255.255.255.0");
+	ns3::Ipv4AddressHelper routerips = ns3::Ipv4AddressHelper("10.3.1.0", "255.255.255.0");
 	ns3::Ipv4AddressHelper leftips   = ns3::Ipv4AddressHelper("10.1.1.0", "255.255.255.0");
-	ns3::Ipv4AddressHelper rightips  = ns3::Ipv4AddressHelper("10.1.2.0", "255.255.255.0");
+	ns3::Ipv4AddressHelper rightips  = ns3::Ipv4AddressHelper("10.2.1.0", "255.255.255.0");
 
 	ns3::Ipv4InterfaceContainer routerifs;
 	ns3::Ipv4InterfaceContainer leftleafifs;
@@ -219,7 +222,7 @@ int main (int argc, char *argv[])
 	for ( int i = 0; i < number_of_clients; ++i)
 	{
 		ns3::Ptr<ns3::Socket> sockptr;
-		unsigned int pkgsize = 512;
+		unsigned int pkgsize = 1024;
 		float start = 2.0;
 		// APP = UR, TCP, 1024, 2.0
 		// TCP flow
@@ -232,7 +235,7 @@ int main (int argc, char *argv[])
 		// std::string prefix = "/NodeList/" + nodeidss.str();
 
 		sinkApps.Add(TcpPacketSinkHelper.Install(rightleaves.Get(i)));
-		float stop = 60.0;
+		float stop = 20.0;
 
 		ns3::Ptr<UnlimitedRateApp> app = ns3::CreateObject<UnlimitedRateApp> ();;
 		app->Setup(sockptr, ns3::InetSocketAddress(rightleafifs.GetAddress(i), port), pkgsize);
@@ -247,9 +250,9 @@ int main (int argc, char *argv[])
 	// TODO VP-2: populate manually
 	ns3::Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
-	leafLink.EnablePcapAll("VP_", true);
+	bottleNeckLink.EnablePcapAll("VP_", true);
 
-	float simstop = 60.0;
+	float simstop = 20.0;
 	if (simstop > 0.0) {
 		ns3::Simulator::Stop(ns3::Seconds(simstop));
 	}
