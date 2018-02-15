@@ -44,9 +44,6 @@ UnlimitedRateApp::~UnlimitedRateApp()
 void UnlimitedRateApp::Setup(ns3::Ptr<ns3::Socket> socket, ns3::Address address, uint32_t packetSize)
 {
 	m_socket = socket;
-	m_socket->SetIpTos(1);
-	m_socket->SetIpTtl (10);
-
 	m_peer = address;
 	m_packetSize = packetSize;
 
@@ -67,7 +64,6 @@ void UnlimitedRateApp::StartApplication()
 	m_socket->Connect(m_peer);
 	// Set IP Header
 	m_socket->SetIpTos(4);
-
 	m_socket->ShutdownRecv();
 	m_socket->SetConnectCallback(ns3::MakeCallback(&UnlimitedRateApp::ConnectionSucceeded, this), ns3::MakeCallback(&UnlimitedRateApp::ConnectionFailed, this));
 	m_socket->SetSendCallback(ns3::MakeCallback(&UnlimitedRateApp::DataSend, this));
@@ -174,12 +170,13 @@ int main (int argc, char *argv[])
 		rightleafdevices.Add(cright.Get(1));
 	}
 
-	// // Assign IPv4 addresses
+	// Assign IPv4 addresses
 	ns3::InternetStackHelper stack;
 	stack.Install(routers);
 	stack.Install(leftleaves);
 	stack.Install(rightleaves);
 
+	// TODO: Redesign address allocating ( same helper )
 	ns3::Ipv4AddressHelper routerips = ns3::Ipv4AddressHelper("10.3.1.0", "255.255.255.0");
 	ns3::Ipv4AddressHelper leftips   = ns3::Ipv4AddressHelper("10.1.1.0", "255.255.255.0");
 	ns3::Ipv4AddressHelper rightips  = ns3::Ipv4AddressHelper("10.2.1.0", "255.255.255.0");
@@ -246,7 +243,7 @@ int main (int argc, char *argv[])
 	// TODO VP-2: populate manually
 	ns3::Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
-	bottleNeckLink.EnablePcapAll("output/VP_", true);
+	bottleNeckLink.EnablePcap("output/pcap/BN_", routers.Get(0)->GetId(), 0);
 
 	float simstop = 20.0;
 	if (simstop > 0.0) {
