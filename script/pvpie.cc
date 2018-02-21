@@ -4,15 +4,15 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
 
-NS_LOG_COMPONENT_DEFINE ("PIE");
+NS_LOG_COMPONENT_DEFINE ("PVPIE");
 
-class SourceApp : public ns3::Application
+class ValuedApp : public ns3::Application
 {
 	public:
-		SourceApp();
-		virtual ~ SourceApp();
+		ValuedApp();
+		virtual ~ ValuedApp();
 
-		void Setup(ns3::Ptr<ns3::Socket> socket, ns3::Address address, uint32_t packetSize);
+		void Setup(ns3::Ptr<ns3::Socket> socket, ns3::Address address, uint32_t packetSize, uint8_t packetValue);
 
 	private:
 		virtual void StartApplication(void);
@@ -24,6 +24,7 @@ class SourceApp : public ns3::Application
 		ns3::Address m_peer;
 		bool m_connected;
 		uint32_t m_packetSize;
+		uint8_t m_packetValue;
 
 		void ConnectionSucceeded(ns3::Ptr<ns3::Socket> socket);
 		void ConnectionFailed(ns3::Ptr<ns3::Socket> socket);
@@ -31,48 +32,48 @@ class SourceApp : public ns3::Application
 		void Ignore(ns3::Ptr<ns3::Socket> socket);
 };
 
-SourceApp::SourceApp(): m_socket(0), m_connected(false), m_packetSize(512)
+ValuedApp::ValuedApp(): m_socket(0), m_connected(false), m_packetSize(512), m_packetValue(0)
 {
 }
 
-SourceApp::~SourceApp()
+ValuedApp::~ValuedApp()
 {
 	m_socket = 0;
 }
 
-void SourceApp::Setup(ns3::Ptr<ns3::Socket> socket, ns3::Address address, uint32_t packetSize)
+void ValuedApp::Setup(ns3::Ptr<ns3::Socket> socket, ns3::Address address, uint32_t packetSize, uint8_t packetValue)
 {
 	m_socket = socket;
 	m_peer = address;
 	m_packetSize = packetSize;
+	m_packetValue = packetValue;
 
 	// Fatal error if socket type is not NS3_SOCK_STREAM or NS3_SOCK_SEQPACKET
 	if (m_socket->GetSocketType() != ns3::Socket::NS3_SOCK_STREAM &&
 		m_socket->GetSocketType() != ns3::Socket::NS3_SOCK_SEQPACKET)
 	{
 		NS_FATAL_ERROR
-			("Using SourceApp with an incompatible socket type. "
-			 "SourceApp requires SOCK_STREAM or SOCK_SEQPACKET. "
+			("Using ValuedApp with an incompatible socket type. "
+			 "ValuedApp requires SOCK_STREAM or SOCK_SEQPACKET. "
 			 "In other words, use TCP instead of UDP.");
 	}
 }
 
-void SourceApp::StartApplication()
+void ValuedApp::StartApplication()
 {
 	m_socket->Bind();
 	m_socket->Connect(m_peer);
-	// Set IP Header
-	m_socket->SetIpTos(4);
+	m_socket->SetIpTos(m_packetValue);
 	m_socket->ShutdownRecv();
-	m_socket->SetConnectCallback(ns3::MakeCallback(&SourceApp::ConnectionSucceeded, this), ns3::MakeCallback(&SourceApp::ConnectionFailed, this));
-	m_socket->SetSendCallback(ns3::MakeCallback(&SourceApp::DataSend, this));
+	m_socket->SetConnectCallback(ns3::MakeCallback(&ValuedApp::ConnectionSucceeded, this), ns3::MakeCallback(&ValuedApp::ConnectionFailed, this));
+	m_socket->SetSendCallback(ns3::MakeCallback(&ValuedApp::DataSend, this));
 	if (m_connected)
 	{
 		SendData();
 	}
 }
 
-void SourceApp::StopApplication()
+void ValuedApp::StopApplication()
 {
 	if (m_socket != 0) {
 		m_socket->Close();
@@ -80,18 +81,11 @@ void SourceApp::StopApplication()
 	}
 }
 
-void SourceApp::ConnectionSucceeded(ns3::Ptr<ns3::Socket> socket)
+void ValuedApp::SendData(void)
 {
-	m_connected = true;
-	SendData();
-}
-
-void SourceApp::ConnectionFailed(ns3::Ptr<ns3::Socket> socket)
-{
-}
-
-void SourceApp::SendData(void)
-{
+	// We exit this loop when actual<toSend as the send side
+	// buffer is full. The "DataSend" callback will pop when
+	// some buffer space has freed ip.
 	for (;;) {
 		ns3::Ptr<ns3::Packet> packet = ns3::Create<ns3::Packet>(m_packetSize);
 		int actual = m_socket->Send(packet);
@@ -102,10 +96,20 @@ void SourceApp::SendData(void)
 	}
 }
 
-void SourceApp::DataSend(ns3::Ptr<ns3::Socket>, uint32_t)
+void ValuedApp::ConnectionSucceeded(ns3::Ptr<ns3::Socket> socket)
+{
+	m_connected = true;
+	SendData();
+}
+
+void ValuedApp::ConnectionFailed(ns3::Ptr<ns3::Socket> socket)
+{
+}
+
+void ValuedApp::DataSend(ns3::Ptr<ns3::Socket>, uint32_t)
 {
 	if (m_connected) {
-		ns3::Simulator::ScheduleNow(&SourceApp::SendData, this);
+		ns3::Simulator::ScheduleNow(&ValuedApp::SendData, this);
 	}
 }
 
@@ -114,23 +118,28 @@ int main (int argc, char *argv[])
 	ns3::CommandLine cmd;
 	cmd.Parse (argc, argv);
 
-	int nClients = 3;
 	int port = 9000;
-	float simstop = 120.0;
+	float startTime = 0.0;
+	float stopTime = 5.0;
 
-	unsigned int packetSize = 1024;
-	float clientStart = 0.0;
+	int nClients = 30;
+	unsigned int packetSize = 64;
 
+	std::string accessBandwidth = "10Mbps";
+	std::string accessDelay = "20ms";
+
+	std::string bottleneckBandwidth ="1Mbps";
+	std::string bottleneckDelay = "20ms";
 	ns3::Time::SetResolution (ns3::Time::NS);
 
 	// Create link helpers
 	ns3::PointToPointHelper bottleNeckLink;
-	bottleNeckLink.SetDeviceAttribute("DataRate", ns3::StringValue("100Mbps"));
-	bottleNeckLink.SetChannelAttribute("Delay", ns3::StringValue("20ms"));
+	bottleNeckLink.SetDeviceAttribute("DataRate", ns3::StringValue(bottleneckBandwidth));
+	bottleNeckLink.SetChannelAttribute("Delay", ns3::StringValue(bottleneckDelay));
 
 	ns3::PointToPointHelper leafLink;
-	leafLink.SetDeviceAttribute("DataRate", ns3::StringValue("100Mbps"));
-	leafLink.SetChannelAttribute("Delay", ns3::StringValue("20ms"));
+	leafLink.SetDeviceAttribute("DataRate", ns3::StringValue(accessBandwidth));
+	leafLink.SetChannelAttribute("Delay", ns3::StringValue(accessDelay));
 
 	// Creating Nodes
 	ns3::NodeContainer routers;
@@ -169,6 +178,7 @@ int main (int argc, char *argv[])
 	stack.Install(leftleaves);
 	stack.Install(rightleaves);
 
+	// TODO: Redesign address allocating ( same helper )
 	ns3::Ipv4AddressHelper routerips = ns3::Ipv4AddressHelper("10.3.1.0", "255.255.255.0");
 	ns3::Ipv4AddressHelper leftips   = ns3::Ipv4AddressHelper("10.1.1.0", "255.255.255.0");
 	ns3::Ipv4AddressHelper rightips  = ns3::Ipv4AddressHelper("10.2.1.0", "255.255.255.0");
@@ -181,7 +191,7 @@ int main (int argc, char *argv[])
 
 	routerifs = routerips.Assign(routerdevices);
 
-	for (int i = 0; i < nClients ; ++i )
+	for (int i = 0; i < nClients; ++i )
 	{
 		ns3::NetDeviceContainer ndcleft;
 		ndcleft.Add(leftleafdevices.Get(i));
@@ -212,10 +222,10 @@ int main (int argc, char *argv[])
 		ns3::Ptr<ns3::TcpSocket> tcpsockptr = ns3::DynamicCast<ns3::TcpSocket> (sockptr);
 		tcpsockptr->SetAttribute("SegmentSize", ns3::UintegerValue(packetSize));
 
-		ns3::Ptr<SourceApp> app = ns3::CreateObject<SourceApp> ();;
-		app->Setup(sockptr, ns3::InetSocketAddress(rightleafifs.GetAddress(i), port), packetSize);
+		ns3::Ptr<ValuedApp> app = ns3::CreateObject<ValuedApp> ();;
+		app->Setup(sockptr, ns3::InetSocketAddress(rightleafifs.GetAddress(i), port), packetSize, 4);
+		app->SetStartTime(ns3::Seconds(startTime));
 		leftleaves.Get(i)->AddApplication(app);
-		app->SetStartTime(ns3::Seconds(clientStart));
 
 		sinkApps.Add(TcpPacketSinkHelper.Install(rightleaves.Get(i)));
 	}
@@ -227,7 +237,7 @@ int main (int argc, char *argv[])
 
 	bottleNeckLink.EnablePcap("output/pcap/BN_", routers.Get(0)->GetId(), 0);
 
-	ns3::Simulator::Stop(ns3::Seconds(simstop));
+	ns3::Simulator::Stop(ns3::Seconds(stopTime));
 	ns3::Simulator::Run ();
 	ns3::Simulator::Destroy();
 	return 0;
