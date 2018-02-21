@@ -3,6 +3,7 @@
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
+#include "ns3/global-route-manager.h"
 
 NS_LOG_COMPONENT_DEFINE ("PVPIE");
 
@@ -120,15 +121,15 @@ int main (int argc, char *argv[])
 
 	int port = 9000;
 	float startTime = 0.0;
-	float stopTime = 120.0;
+	float stopTime = 5.0;
 
-	int nClients = 3;
-	unsigned int packetSize = 1024;
+	int nClients = 30;
+	unsigned int packetSize = 64;
 
-	std::string accessBandwidth = "100Mbps";
+	std::string accessBandwidth = "10Mbps";
 	std::string accessDelay = "20ms";
 
-	std::string bottleneckBandwidth ="10Mbps";
+	std::string bottleneckBandwidth ="1Mbps";
 	std::string bottleneckDelay = "20ms";
 
 	ns3::Time::SetResolution (ns3::Time::NS);
@@ -224,7 +225,7 @@ int main (int argc, char *argv[])
 		tcpsockptr->SetAttribute("SegmentSize", ns3::UintegerValue(packetSize));
 
 		ns3::Ptr<ValuedApp> app = ns3::CreateObject<ValuedApp> ();;
-		app->Setup(sockptr, ns3::InetSocketAddress(rightleafifs.GetAddress(i), port), packetSize, 1);
+		app->Setup(sockptr, ns3::InetSocketAddress(rightleafifs.GetAddress(i), port), packetSize, 4);
 		app->SetStartTime(ns3::Seconds(startTime));
 		leftleaves.Get(i)->AddApplication(app);
 
