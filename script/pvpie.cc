@@ -3,16 +3,35 @@
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
+#include "ns3/traffic-control-module.h"
+// Flow monitor helper
 #include "ns3/valuedapp.h"
 
 NS_LOG_COMPONENT_DEFINE ("PVPIE");
+
+void TcPacketsInQueueTrace (ns3::Ptr<ns3::OutputStreamWrapper> stream, uint32_t oldValue, uint32_t newValue)
+{
+	std::cout << "TcPacketsInQueue " << oldValue << " to " << newValue << std::endl;
+	*stream->GetStream() << "TcPacketsInQueue " << oldValue << " to " << newValue << std::endl;
+}
+
+void DevicePacketsInQueueTrace (ns3::Ptr<ns3::OutputStreamWrapper> stream, uint32_t oldValue, uint32_t newValue)
+{
+	std::cout << "DevicePacketsInQueue " << oldValue << " to " << newValue << std::endl;
+	*stream->GetStream() << "DevicePacketsInQueue " << oldValue << " to " << newValue << std::endl;
+}
+
+void SojournTimeTrace (ns3::Time oldValue, ns3::Time newValue)
+{
+	std::cout << "Sojourn time " << newValue.ToDouble (ns3::Time::MS) << "ms" << std::endl;
+}
 
 int main (int argc, char *argv[])
 {
 	ns3::CommandLine cmd;
 	cmd.Parse (argc, argv);
 
-	int port = 9000;
+	int port = 777;
 	float startTime = 0.0;
 	float stopTime = 5.0;
 
@@ -30,6 +49,8 @@ int main (int argc, char *argv[])
 	ns3::PointToPointHelper bottleNeckLink;
 	bottleNeckLink.SetDeviceAttribute("DataRate", ns3::StringValue(bottleneckBandwidth));
 	bottleNeckLink.SetChannelAttribute("Delay", ns3::StringValue(bottleneckDelay));
+	// Limit the capacity o device queue
+	bottleNeckLink.SetQueue ("ns3::DropTailQueue", "Mode", ns3::StringValue ("QUEUE_MODE_PACKETS"), "MaxPackets", ns3::UintegerValue (1));
 
 	ns3::PointToPointHelper leafLink;
 	leafLink.SetDeviceAttribute("DataRate", ns3::StringValue(accessBandwidth));
@@ -72,6 +93,29 @@ int main (int argc, char *argv[])
 	stack.Install(leftleaves);
 	stack.Install(rightleaves);
 
+	// Install Traffic control helper
+	ns3::TrafficControlHelper tch;
+	tch.SetRootQueueDisc ("ns3::RedQueueDisc"); // set PVPIE QueueDisc
+	ns3::QueueDiscContainer qdiscs = tch.Install (routerdevices.Get(0));
+
+	// Connect tracesinks!
+	ns3::AsciiTraceHelper asciiTraceHelper;
+	ns3::Ptr<ns3::OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream ("output/pcap/qlen.bn");
+
+	ns3::Ptr<ns3::QueueDisc> q = qdiscs.Get (0);
+	q->TraceConnectWithoutContext ("PacketsInQueue", ns3::MakeBoundCallback(&TcPacketsInQueueTrace, stream));
+
+
+	ns3::Config::ConnectWithoutContext ("/NodeList/0/$ns3::TrafficControlLayer/RootQueueDiscList/0/SojournTime", ns3::MakeCallback(&SojournTimeTrace));
+
+
+	ns3::Ptr<ns3::OutputStreamWrapper> stream2 = asciiTraceHelper.CreateFileStream ("output/pcap/qlen2.bn");
+	ns3::Ptr<ns3::NetDevice> nd = routerdevices.Get (0);
+
+	ns3::Ptr<ns3::PointToPointNetDevice> ptpnd = ns3::DynamicCast<ns3::PointToPointNetDevice> (nd);
+	ns3::Ptr<ns3::Queue<ns3::Packet> > queue = ptpnd->GetQueue ();
+	queue->TraceConnectWithoutContext ("PacketsInQueue", ns3::MakeBoundCallback(&DevicePacketsInQueueTrace, stream2));
+
 	// TODO: Redesign address allocating ( same helper )
 	ns3::Ipv4AddressHelper routerips = ns3::Ipv4AddressHelper("10.3.1.0", "255.255.255.0");
 	ns3::Ipv4AddressHelper leftips   = ns3::Ipv4AddressHelper("10.1.1.0", "255.255.255.0");
@@ -108,6 +152,9 @@ int main (int argc, char *argv[])
 	ns3::ApplicationContainer sinkApps, udpApp;
 	ns3::Address sinkLocalAddress(ns3::InetSocketAddress(ns3::Ipv4Address::GetAny(), port));
 	ns3::PacketSinkHelper TcpPacketSinkHelper("ns3::TcpSocketFactory", sinkLocalAddress);
+
+	// InetSocketAddress rmt (interfaces.GetAddress (0), port);
+	// rmt.SetTos (0xb8);
 
 	for ( int i = 0; i < nClients; ++i)
 	{
