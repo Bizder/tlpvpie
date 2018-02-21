@@ -3,115 +3,9 @@
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
+#include "ns3/valuedapp.h"
 
 NS_LOG_COMPONENT_DEFINE ("PVPIE");
-
-class ValuedApp : public ns3::Application
-{
-	public:
-		ValuedApp();
-		virtual ~ ValuedApp();
-
-		void Setup(ns3::Ptr<ns3::Socket> socket, ns3::Address address, uint32_t packetSize, uint8_t packetValue);
-
-	private:
-		virtual void StartApplication(void);
-		virtual void StopApplication(void);
-
-		void SendData();
-
-		ns3::Ptr<ns3::Socket> m_socket;
-		ns3::Address m_peer;
-		bool m_connected;
-		uint32_t m_packetSize;
-		uint8_t m_packetValue;
-
-		void ConnectionSucceeded(ns3::Ptr<ns3::Socket> socket);
-		void ConnectionFailed(ns3::Ptr<ns3::Socket> socket);
-		void DataSend(ns3::Ptr<ns3::Socket>, uint32_t);
-		void Ignore(ns3::Ptr<ns3::Socket> socket);
-};
-
-ValuedApp::ValuedApp(): m_socket(0), m_connected(false), m_packetSize(512), m_packetValue(0)
-{
-}
-
-ValuedApp::~ValuedApp()
-{
-	m_socket = 0;
-}
-
-void ValuedApp::Setup(ns3::Ptr<ns3::Socket> socket, ns3::Address address, uint32_t packetSize, uint8_t packetValue)
-{
-	m_socket = socket;
-	m_peer = address;
-	m_packetSize = packetSize;
-	m_packetValue = packetValue;
-
-	// Fatal error if socket type is not NS3_SOCK_STREAM or NS3_SOCK_SEQPACKET
-	if (m_socket->GetSocketType() != ns3::Socket::NS3_SOCK_STREAM &&
-		m_socket->GetSocketType() != ns3::Socket::NS3_SOCK_SEQPACKET)
-	{
-		NS_FATAL_ERROR
-			("Using ValuedApp with an incompatible socket type. "
-			 "ValuedApp requires SOCK_STREAM or SOCK_SEQPACKET. "
-			 "In other words, use TCP instead of UDP.");
-	}
-}
-
-void ValuedApp::StartApplication()
-{
-	m_socket->Bind();
-	m_socket->Connect(m_peer);
-	m_socket->SetIpTos(m_packetValue);
-	m_socket->ShutdownRecv();
-	m_socket->SetConnectCallback(ns3::MakeCallback(&ValuedApp::ConnectionSucceeded, this), ns3::MakeCallback(&ValuedApp::ConnectionFailed, this));
-	m_socket->SetSendCallback(ns3::MakeCallback(&ValuedApp::DataSend, this));
-	if (m_connected)
-	{
-		SendData();
-	}
-}
-
-void ValuedApp::StopApplication()
-{
-	if (m_socket != 0) {
-		m_socket->Close();
-		m_connected = false;
-	}
-}
-
-void ValuedApp::SendData(void)
-{
-	// We exit this loop when actual<toSend as the send side
-	// buffer is full. The "DataSend" callback will pop when
-	// some buffer space has freed ip.
-	for (;;) {
-		ns3::Ptr<ns3::Packet> packet = ns3::Create<ns3::Packet>(m_packetSize);
-		int actual = m_socket->Send(packet);
-		if ((unsigned) actual != m_packetSize)
-		{
-			break;
-		}
-	}
-}
-
-void ValuedApp::ConnectionSucceeded(ns3::Ptr<ns3::Socket> socket)
-{
-	m_connected = true;
-	SendData();
-}
-
-void ValuedApp::ConnectionFailed(ns3::Ptr<ns3::Socket> socket)
-{
-}
-
-void ValuedApp::DataSend(ns3::Ptr<ns3::Socket>, uint32_t)
-{
-	if (m_connected) {
-		ns3::Simulator::ScheduleNow(&ValuedApp::SendData, this);
-	}
-}
 
 int main (int argc, char *argv[])
 {
@@ -222,7 +116,7 @@ int main (int argc, char *argv[])
 		ns3::Ptr<ns3::TcpSocket> tcpsockptr = ns3::DynamicCast<ns3::TcpSocket> (sockptr);
 		tcpsockptr->SetAttribute("SegmentSize", ns3::UintegerValue(packetSize));
 
-		ns3::Ptr<ValuedApp> app = ns3::CreateObject<ValuedApp> ();;
+		ns3::Ptr<ns3::ValuedApp> app = ns3::CreateObject<ns3::ValuedApp> ();;
 		app->Setup(sockptr, ns3::InetSocketAddress(rightleafifs.GetAddress(i), port), packetSize, 4);
 		app->SetStartTime(ns3::Seconds(startTime));
 		leftleaves.Get(i)->AddApplication(app);
@@ -232,7 +126,6 @@ int main (int argc, char *argv[])
 
 	sinkApps.Start(ns3::Seconds(0.0));
 
-	// TODO VP-2: populate manually
 	ns3::Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
 	bottleNeckLink.EnablePcap("output/pcap/BN_", routers.Get(0)->GetId(), 0);
