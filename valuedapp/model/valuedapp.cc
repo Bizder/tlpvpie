@@ -13,7 +13,7 @@ ValuedApp::~ValuedApp()
 	m_socket = 0;
 }
 
-void ValuedApp::Setup(ns3::Ptr<ns3::Socket> socket, ns3::Address address, uint32_t packetSize, uint8_t packetValue)
+void ValuedApp::Setup(Ptr<Socket> socket, Address address, uint32_t packetSize, uint8_t packetValue)
 {
 	m_socket = socket;
 	m_peer = address;
@@ -21,8 +21,8 @@ void ValuedApp::Setup(ns3::Ptr<ns3::Socket> socket, ns3::Address address, uint32
 	m_packetValue = packetValue;
 
 	// Fatal error if socket type is not NS3_SOCK_STREAM or NS3_SOCK_SEQPACKET
-	if (m_socket->GetSocketType() != ns3::Socket::NS3_SOCK_STREAM &&
-		m_socket->GetSocketType() != ns3::Socket::NS3_SOCK_SEQPACKET)
+	if (m_socket->GetSocketType() != Socket::NS3_SOCK_STREAM &&
+		m_socket->GetSocketType() != Socket::NS3_SOCK_SEQPACKET)
 	{
 		NS_FATAL_ERROR
 			("Using ValuedApp with an incompatible socket type. "
@@ -37,8 +37,8 @@ void ValuedApp::StartApplication()
 	m_socket->Connect(m_peer);
 	m_socket->SetIpTos(m_packetValue);
 	m_socket->ShutdownRecv();
-	m_socket->SetConnectCallback(ns3::MakeCallback(&ValuedApp::ConnectionSucceeded, this), ns3::MakeCallback(&ValuedApp::ConnectionFailed, this));
-	m_socket->SetSendCallback(ns3::MakeCallback(&ValuedApp::DataSend, this));
+	m_socket->SetConnectCallback(MakeCallback(&ValuedApp::ConnectionSucceeded, this), MakeCallback(&ValuedApp::ConnectionFailed, this));
+	m_socket->SetSendCallback(MakeCallback(&ValuedApp::DataSend, this));
 	if (m_connected)
 	{
 		SendData();
@@ -59,7 +59,7 @@ void ValuedApp::SendData(void)
 	// buffer is full. The "DataSend" callback will pop when
 	// some buffer space has freed ip.
 	for (;;) {
-		ns3::Ptr<ns3::Packet> packet = ns3::Create<ns3::Packet>(m_packetSize);
+		Ptr<Packet> packet = Create<Packet>(m_packetSize);
 		int actual = m_socket->Send(packet);
 		if ((unsigned) actual != m_packetSize)
 		{
@@ -68,20 +68,20 @@ void ValuedApp::SendData(void)
 	}
 }
 
-void ValuedApp::ConnectionSucceeded(ns3::Ptr<ns3::Socket> socket)
+void ValuedApp::ConnectionSucceeded(Ptr<Socket> socket)
 {
 	m_connected = true;
 	SendData();
 }
 
-void ValuedApp::ConnectionFailed(ns3::Ptr<ns3::Socket> socket)
+void ValuedApp::ConnectionFailed(Ptr<Socket> socket)
 {
 }
 
-void ValuedApp::DataSend(ns3::Ptr<ns3::Socket>, uint32_t)
+void ValuedApp::DataSend(Ptr<Socket>, uint32_t)
 {
 	if (m_connected) {
-		ns3::Simulator::ScheduleNow(&ValuedApp::SendData, this);
+		Simulator::ScheduleNow(&ValuedApp::SendData, this);
 	}
 }
 
