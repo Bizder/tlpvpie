@@ -12,7 +12,7 @@ NS_LOG_COMPONENT_DEFINE ("PVPIE");
 
 void DropProbabilityTrace (ns3::Ptr<ns3::OutputStreamWrapper> stream, double oldValue, double newValue){
 	std::cout << "Drop probability " << oldValue << " to " << newValue << std::endl;
-	*stream->GetStream() << "Drop probability " << oldValue << " to " << newValue << std::endl;
+	*stream->GetStream() << ns3::Simulator::Now().GetSeconds() << "\t" << newValue << std::endl;
 }
 
 void TcPacketsInQueueTrace (ns3::Ptr<ns3::OutputStreamWrapper> stream, uint32_t oldValue, uint32_t newValue)
@@ -39,7 +39,7 @@ int main (int argc, char *argv[])
 
 	int port = 777;
 	float startTime = 0.0;
-	float stopTime = 5.0;
+	float stopTime = 120.0;
 
 	int nClients = 200;
 	unsigned int packetSize = 1000;
