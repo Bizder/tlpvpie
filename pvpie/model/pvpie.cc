@@ -77,6 +77,10 @@ static TypeId tid = TypeId ("ns3::PvPieQueueDisc")
 					"Probability of packet droping",
 					MakeTraceSourceAccessor (&PvPieQueueDisc::m_dropProb),
 					"ns3::TracedValueCallback::Double")
+	.AddTraceSource("QueueingDelay",
+					"Queueing Delay",
+					MakeTraceSourceAccessor (&PvPieQueueDisc::m_qDelay),
+					"ns3::Time::TracedValueCallback")
 	;
 
 	return tid;

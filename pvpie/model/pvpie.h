@@ -82,7 +82,7 @@ class PvPieQueueDisc : public QueueDisc {
 		// ** Variables maintained by PIE
 		TracedValue<double> m_dropProb;                            //!< Variable used in calculation of drop probability
 		Time m_qDelayOld;                             //!< Old value of queue delay
-		Time m_qDelay;                                //!< Current value of queue delay
+		TracedValue<Time> m_qDelay;                                //!< Current value of queue delay
 		Time m_burstAllowance;                        //!< Current max burst value in seconds that is allowed before random drops kick in
 		uint32_t m_burstReset;                        //!< Used to reset value of burst allowance
 		BurstStateT m_burstState;                     //!< Used to determine the current state of burst
