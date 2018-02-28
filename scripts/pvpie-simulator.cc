@@ -10,7 +10,7 @@
 
 #define OUTPUT_FOLDER std::string("output/")
 
-NS_LOG_COMPONENT_DEFINE ("PVPIE");
+NS_LOG_COMPONENT_DEFINE ("PvPieSimulator");
 
 void DropProbabilityTrace(ns3::Ptr<ns3::OutputStreamWrapper> stream, double oldValue, double newValue){
 	*stream->GetStream() << ns3::Simulator::Now().GetSeconds() << "\t" << newValue << std::endl;
@@ -37,7 +37,7 @@ int main (int argc, char *argv[])
 
 	int port = 777;
 	float startTime = 0.0;
-	float stopTime = 120.0;
+	float stopTime = 30.0;
 
 	int nClients = 5;
 	unsigned int packetSize = 1000;
@@ -93,9 +93,11 @@ int main (int argc, char *argv[])
 
 	// Assign IPv4 addresses
 	ns3::InternetStackHelper stack;
+
 	stack.Install(routers);
-	stack.Install(leftleaves);
 	stack.Install(rightleaves);
+	stack.SetTcp ("ns3::NscTcpL4Protocol","Library",ns3::StringValue("liblinux2.6.26.so"));
+	stack.Install(leftleaves);
 
 	// Install Traffic control helper
 	ns3::Config::SetDefault("ns3::PvPieQueueDisc::Mode", ns3::StringValue("QUEUE_DISC_MODE_PACKETS"));
@@ -109,24 +111,6 @@ int main (int argc, char *argv[])
 	ns3::TrafficControlHelper tch;
 	tch.SetRootQueueDisc("ns3::PvPieQueueDisc");
 	ns3::QueueDiscContainer qdiscs = tch.Install (routerdevices.Get(0));
-
-	// Connect tracesinks!
-	ns3::AsciiTraceHelper asciiTraceHelper;
-
-	ns3::Ptr<ns3::OutputStreamWrapper> qdiscLengthStream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/qdlen.bn");
-	ns3::Ptr<ns3::QueueDisc> qd = qdiscs.Get(0);
-	qd->TraceConnectWithoutContext ("PacketsInQueue", ns3::MakeBoundCallback(&TcPacketsInQueueTrace, qdiscLengthStream));
-
-	ns3::Ptr<ns3::PvPieQueueDisc> pqd = ns3::DynamicCast<ns3::PvPieQueueDisc>(qd);
-	ns3::Ptr<ns3::OutputStreamWrapper> dropProbStream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/p.bn");
-	pqd->TraceConnectWithoutContext ("Probability", ns3::MakeBoundCallback(&DropProbabilityTrace, dropProbStream));
-	ns3::Ptr<ns3::OutputStreamWrapper> delayStream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/delay.bn");
-	pqd->TraceConnectWithoutContext ("QueueingDelay", ns3::MakeBoundCallback(&DelayTrace, delayStream));
-
-	ns3::Ptr<ns3::OutputStreamWrapper> qLengthStream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/qlen.bn");
-	ns3::Ptr<ns3::PointToPointNetDevice> ptpnd = ns3::DynamicCast<ns3::PointToPointNetDevice>(routerdevices.Get(0));
-	ns3::Ptr<ns3::Queue<ns3::Packet> > queue = ptpnd->GetQueue();
-	queue->TraceConnectWithoutContext ("PacketsInQueue", ns3::MakeBoundCallback(&DevicePacketsInQueueTrace, qLengthStream));
 
 	// TODO: Redesign address allocating ( same helper )
 	ns3::Ipv4AddressHelper routerips = ns3::Ipv4AddressHelper("10.3.1.0", "255.255.255.0");
@@ -187,9 +171,29 @@ int main (int argc, char *argv[])
 
 	ns3::Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
+	ns3::Simulator::Stop(ns3::Seconds(stopTime));
+
+	// Configure logging
 	bottleNeckLink.EnablePcap("output/pcap/BN_", routers.Get(0)->GetId(), 0);
 
-	ns3::Simulator::Stop(ns3::Seconds(stopTime));
+	ns3::AsciiTraceHelper asciiTraceHelper;
+
+	ns3::Ptr<ns3::OutputStreamWrapper> qdiscLengthStream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/qdlen.bn");
+	ns3::Ptr<ns3::QueueDisc> qd = qdiscs.Get(0);
+	qd->TraceConnectWithoutContext ("PacketsInQueue", ns3::MakeBoundCallback(&TcPacketsInQueueTrace, qdiscLengthStream));
+
+	ns3::Ptr<ns3::PvPieQueueDisc> pqd = ns3::DynamicCast<ns3::PvPieQueueDisc>(qd);
+	ns3::Ptr<ns3::OutputStreamWrapper> dropProbStream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/p.bn");
+	pqd->TraceConnectWithoutContext ("Probability", ns3::MakeBoundCallback(&DropProbabilityTrace, dropProbStream));
+	ns3::Ptr<ns3::OutputStreamWrapper> delayStream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/delay.bn");
+	pqd->TraceConnectWithoutContext ("QueueingDelay", ns3::MakeBoundCallback(&DelayTrace, delayStream));
+
+	ns3::Ptr<ns3::OutputStreamWrapper> qLengthStream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/qlen.bn");
+	ns3::Ptr<ns3::PointToPointNetDevice> ptpnd = ns3::DynamicCast<ns3::PointToPointNetDevice>(routerdevices.Get(0));
+	ns3::Ptr<ns3::Queue<ns3::Packet> > queue = ptpnd->GetQueue();
+	queue->TraceConnectWithoutContext ("PacketsInQueue", ns3::MakeBoundCallback(&DevicePacketsInQueueTrace, qLengthStream));
+
+
 	ns3::Simulator::Run ();
 	ns3::Simulator::Destroy();
 	return 0;
