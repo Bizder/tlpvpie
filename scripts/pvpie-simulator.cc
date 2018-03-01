@@ -37,10 +37,13 @@ int main (int argc, char *argv[])
 
 	int port = 777;
 	float startTime = 0.0;
-	float stopTime = 30.0;
+	float stopTime = 120.0;
 
-	int nClients = 5;
+	int nClients = 1;
 	unsigned int packetSize = 1000;
+
+	ns3::Config::SetDefault ("ns3::OnOffApplication::PacketSize", ns3::UintegerValue(packetSize));
+	ns3::Config::SetDefault ("ns3::OnOffApplication::DataRate", ns3::StringValue("3Mbps"));
 
 	std::string accessBandwidth = "10Mbps";
 	std::string accessDelay = "20ms";
@@ -62,46 +65,34 @@ int main (int argc, char *argv[])
 
 	// Creating Nodes
 	ns3::NodeContainer routers;
-	ns3::Ptr<ns3::Node> leftrouter = ns3::CreateObject<ns3::Node>();
-	routers.Add(leftrouter);
-	ns3::Ptr<ns3::Node> rightrouter = ns3::CreateObject<ns3::Node>();
-	routers.Add(rightrouter);
+	routers.Create(2);
 
 	ns3::NodeContainer leftleaves;
-	ns3::NodeContainer rightleaves;
 	leftleaves.Create(nClients);
-	rightleaves.Create(nClients);
 
 	// Add links to connect Nodes
 	ns3::NetDeviceContainer routerdevices = bottleNeckLink.Install(routers);
 
 	ns3::NetDeviceContainer leftrouterdevices;
 	ns3::NetDeviceContainer leftleafdevices;
-	ns3::NetDeviceContainer rightrouterdevices;
-	ns3::NetDeviceContainer rightleafdevices;
 
 	for (int i = 0; i < nClients ; ++i)
 	{
 		ns3::NetDeviceContainer cleft = leafLink.Install(routers.Get(0), leftleaves.Get(i));
 		leftrouterdevices.Add(cleft.Get(0));
 		leftleafdevices.Add(cleft.Get(1));
-
-		ns3::NetDeviceContainer cright = leafLink.Install(routers.Get(1), rightleaves.Get(i));
-		rightrouterdevices.Add(cright.Get(0));
-		rightleafdevices.Add(cright.Get(1));
 	}
 
 	// Assign IPv4 addresses
 	ns3::InternetStackHelper stack;
 
 	stack.Install(routers);
-	stack.Install(rightleaves);
-	stack.SetTcp ("ns3::NscTcpL4Protocol","Library",ns3::StringValue("liblinux2.6.26.so"));
+	// stack.SetTcp ("ns3::NscTcpL4Protocol","Library",ns3::StringValue("liblinux2.6.26.so"));
 	stack.Install(leftleaves);
 
 	// Install Traffic control helper
 	ns3::Config::SetDefault("ns3::PvPieQueueDisc::Mode", ns3::StringValue("QUEUE_DISC_MODE_PACKETS"));
-	ns3::Config::SetDefault("ns3::PvPieQueueDisc::QueueDelayReference", ns3::TimeValue(ns3::MilliSeconds (40))); // 40 ms
+	ns3::Config::SetDefault("ns3::PvPieQueueDisc::QueueDelayReference", ns3::TimeValue(ns3::MilliSeconds (20))); // 40 ms
 	ns3::Config::SetDefault("ns3::PvPieQueueDisc::Tupdate", ns3::TimeValue(ns3::MilliSeconds (32))); // 32 ms
 	ns3::Config::SetDefault("ns3::PvPieQueueDisc::DequeueThreshold", ns3::UintegerValue(10000)); // 10 Kb for packets between 1Kb and 1,5Kb
 	ns3::Config::SetDefault("ns3::PvPieQueueDisc::MeanPktSize", ns3::UintegerValue(packetSize));
@@ -110,18 +101,15 @@ int main (int argc, char *argv[])
 
 	ns3::TrafficControlHelper tch;
 	tch.SetRootQueueDisc("ns3::PvPieQueueDisc");
-	ns3::QueueDiscContainer qdiscs = tch.Install (routerdevices.Get(0));
+	ns3::QueueDiscContainer qdiscs = tch.Install(routerdevices.Get(0));
 
 	// TODO: Redesign address allocating ( same helper )
-	ns3::Ipv4AddressHelper routerips = ns3::Ipv4AddressHelper("10.3.1.0", "255.255.255.0");
+	ns3::Ipv4AddressHelper routerips = ns3::Ipv4AddressHelper("99.9.1.0", "255.255.255.0");
 	ns3::Ipv4AddressHelper leftips   = ns3::Ipv4AddressHelper("10.1.1.0", "255.255.255.0");
-	ns3::Ipv4AddressHelper rightips  = ns3::Ipv4AddressHelper("10.2.1.0", "255.255.255.0");
 
 	ns3::Ipv4InterfaceContainer routerifs;
 	ns3::Ipv4InterfaceContainer leftleafifs;
 	ns3::Ipv4InterfaceContainer leftrouterifs;
-	ns3::Ipv4InterfaceContainer rightleafifs;
-	ns3::Ipv4InterfaceContainer rightrouterifs;
 
 	routerifs = routerips.Assign(routerdevices);
 
@@ -134,47 +122,40 @@ int main (int argc, char *argv[])
 		leftleafifs.Add(ifcleft.Get(0));
 		leftrouterifs.Add(ifcleft.Get(1));
 		leftips.NewNetwork();
-
-		ns3::NetDeviceContainer ndcright;
-		ndcright.Add(rightleafdevices.Get(i));
-		ndcright.Add(rightrouterdevices.Get(i));
-		ns3::Ipv4InterfaceContainer ifcright = rightips.Assign(ndcright);
-		rightleafifs.Add(ifcright.Get(0));
-		rightrouterifs.Add(ifcright.Get(1));
-		rightips.NewNetwork();
 	}
-
-	// App layer
-	ns3::ApplicationContainer sinkApps, udpApp;
-	ns3::Address sinkLocalAddress(ns3::InetSocketAddress(ns3::Ipv4Address::GetAny(), port));
-	ns3::PacketSinkHelper TcpPacketSinkHelper("ns3::TcpSocketFactory", sinkLocalAddress);
 
 	// InetSocketAddress rmt (interfaces.GetAddress (0), port);
 	// rmt.SetTos (0xb8);
 
+	// App layer
+	ns3::Address sinkLocalAddress(ns3::InetSocketAddress(ns3::Ipv4Address::GetAny(), port));
+	ns3::PacketSinkHelper TcpPacketSinkHelper("ns3::TcpSocketFactory", sinkLocalAddress);
+	ns3::ApplicationContainer sinkApp = TcpPacketSinkHelper.Install(routers.Get(1));
+	sinkApp.Start(ns3::Seconds(startTime));
+	// sinkApp.Stop(ns3::seconds(stopTime));
+
+	ns3::ApplicationContainer sourceApps;
+
 	for ( int i = 0; i < nClients; ++i)
 	{
-		ns3::Ptr<ns3::Socket> sockptr;
-		sockptr = ns3::Socket::CreateSocket(leftleaves.Get(i), ns3::TcpSocketFactory::GetTypeId());
-		ns3::Ptr<ns3::TcpSocket> tcpsockptr = ns3::DynamicCast<ns3::TcpSocket> (sockptr);
-		tcpsockptr->SetAttribute("SegmentSize", ns3::UintegerValue(packetSize));
 
-		ns3::Ptr<ns3::ValuedApp> app = ns3::CreateObject<ns3::ValuedApp> ();;
-		app->Setup(sockptr, ns3::InetSocketAddress(rightleafifs.GetAddress(i), port), packetSize, 4);
-		app->SetStartTime(ns3::Seconds(startTime));
-		leftleaves.Get(i)->AddApplication(app);
-
-		sinkApps.Add(TcpPacketSinkHelper.Install(rightleaves.Get(i)));
+		ns3::Address remoteAddress(ns3::InetSocketAddress(routerifs.GetAddress(1), port));
+		ns3::OnOffHelper clientHelper("ns3::TcpSocketFactory", remoteAddress);
+		clientHelper.SetAttribute ("OnTime", ns3::StringValue("ns3::ConstantRandomVariable[Constant=1]"));
+		clientHelper.SetAttribute ("OffTime", ns3::StringValue("ns3::ConstantRandomVariable[Constant=0]"));
+		// clientHelper.SetAttribute ("OnTime", ns3::StringValue("ns3::UniformRandomVariable[Min=0.|Max=1.]"));
+		// clientHelper.SetAttribute ("OffTime", ns3::StringValue("ns3::UniformRandomVariable[Min=0.|Max=1.]"));
+		sourceApps = clientHelper.Install (leftleaves.Get (i));
+		sourceApps.Start(ns3::Seconds(startTime));
+		// sourceApps.Stop(ns3::Seconds(stopTime));
 	}
-
-	sinkApps.Start(ns3::Seconds(0.0));
 
 	ns3::Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
 	ns3::Simulator::Stop(ns3::Seconds(stopTime));
 
 	// Configure logging
-	bottleNeckLink.EnablePcap("output/pcap/BN_", routers.Get(0)->GetId(), 0);
+	bottleNeckLink.EnablePcap(OUTPUT_FOLDER + "/pcap/BN_", routers.Get(0)->GetId(), 0);
 
 	ns3::AsciiTraceHelper asciiTraceHelper;
 
