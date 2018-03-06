@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-OUTPUTFOLDER = "c:/Users/tokodi/STUDY/ns3-container/output/"
+OUTPUTFOLDER = "d:/Projects/PVPIE-ns3/output/"
 
 # probability
 
@@ -33,7 +33,7 @@ with open(OUTPUTFOLDER + 'ascii/delay.bn', 'rb') as delay_file:
 
 	plt.plot(xs, ys, linewidth=1, color='r')
 
-	plt.plot(xs, np.array([40 for i in xrange(len(xs))]), color='b')
+	plt.plot(xs, np.array([20 for i in xrange(len(xs))]), color='b')
 	plt.title('Delay')
 	plt.xlabel('Time(s)')
 	plt.ylabel('Delay(ms)')
