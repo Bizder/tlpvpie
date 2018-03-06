@@ -63,9 +63,9 @@ class PvPieQueueDisc : public QueueDisc {
 		* \param qSize queue size
 		* \returns 0 for no drop, 1 for drop
 		*/
-		bool DropEarly (Ptr<QueueDiscItem> item, uint32_t qSize);
+		bool DropEarly(Ptr<QueueDiscItem> item, uint32_t qSize);
 
-		void CalculateP ();
+		void CalculateP();
 
 		// ** Variables supplied by user
 		QueueDiscMode m_mode;                         //!< Mode (bytes or packets)
