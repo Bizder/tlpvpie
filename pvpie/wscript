@@ -6,12 +6,15 @@
 # def configure(conf):
 #     conf.check_nonfatal(header_name='stdint.h', define_name='HAVE_STDINT_H')
 
+
 def build(bld):
     module = bld.create_ns3_module('pvpie', ['core', 'traffic-control'])
     module.source = [
-        'model/pvpie.cc',
+        'model/pv-pie-queue-disc.cc',
         'helper/pvpie-helper.cc',
-        'model/marker.cc',
+        'model/packet-marker-queue-disc.cc',
+        'model/token-bucket.cc',
+        'model/packet-value-tag.cc',
     ]
 
     module_test = bld.create_ns3_module_test_library('pvpie')
@@ -22,13 +25,14 @@ def build(bld):
     headers = bld(features='ns3header')
     headers.module = 'pvpie'
     headers.source = [
-        'model/pvpie.h',
+        'model/pv-pie-queue-disc.h',
         'helper/pvpie-helper.h',
-        'model/marker.h',
+        'model/packet-marker-queue-disc.h',
+        'model/token-bucket.h',
+        'model/packet-value-tag.h',
     ]
 
     if bld.env.ENABLE_EXAMPLES:
         bld.recurse('examples')
 
     # bld.ns3_python_bindings()
-

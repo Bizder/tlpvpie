@@ -2,7 +2,7 @@
 #ifndef PVPIE_HELPER_H
 #define PVPIE_HELPER_H
 
-#include "ns3/pvpie.h"
+#include "ns3/pv-pie-queue-disc.h"
 
 namespace ns3 {
 

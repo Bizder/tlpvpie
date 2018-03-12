@@ -6,9 +6,10 @@
 #include "ns3/double.h"
 #include "ns3/simulator.h"
 #include "ns3/abort.h"
-#include "pvpie.h"
+#include "pv-pie-queue-disc.h"
 #include "ns3/drop-tail-queue.h"
 #include "ns3/net-device-queue-interface.h"
+#include "packet-value-tag.h"
 
 namespace ns3 {
 
@@ -163,7 +164,7 @@ void PvPieQueueDisc::InitializeParams (void)
 	m_avgDqRate = 0.0;
 	m_dqStart = 0;
 	m_burstState = NO_BURST;
-	m_qDelayOld = Time (Seconds (0));
+	m_qDelayOld = Time(Seconds(0));
 }
 
 bool PvPieQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
@@ -227,14 +228,18 @@ bool PvPieQueueDisc::DropEarly (Ptr<QueueDiscItem> item, uint32_t qSize)
 	{
 		return false;
 	}
-	else if (GetMode () == QUEUE_DISC_MODE_BYTES && qSize <= 2 * m_meanPktSize)
+	else if (GetMode() == QUEUE_DISC_MODE_BYTES && qSize <= 2 * m_meanPktSize)
 	{
 		return false;
 	}
-	else if (GetMode () == QUEUE_DISC_MODE_PACKETS && qSize <= 2)
+	else if (GetMode() == QUEUE_DISC_MODE_PACKETS && qSize <= 2)
 	{
 		return false;
 	}
+
+	MyTag tag;
+	item->GetPacket()->PeekPacketTag(tag);
+	packet_vaue = tag.GetSimpleValue();
 
 	if (u > p)
 	{
@@ -243,7 +248,7 @@ bool PvPieQueueDisc::DropEarly (Ptr<QueueDiscItem> item, uint32_t qSize)
 	return true;
 }
 
-void PvPieQueueDisc::CalculateP ()
+void PvPieQueueDisc::CalculateP()
 {
 	NS_LOG_FUNCTION (this);
 	Time qDelay;

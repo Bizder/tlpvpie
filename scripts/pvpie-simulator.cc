@@ -5,7 +5,8 @@
 #include "ns3/applications-module.h"
 #include "ns3/traffic-control-module.h"
 // Flow monitor helper
-#include "ns3/pvpie.h"
+#include "ns3/pv-pie-queue-disc.h"
+#include "ns3/packet-marker-queue-disc.h"
 #include "ns3/valuedapp.h"
 
 #define OUTPUT_FOLDER std::string("output/")
@@ -39,7 +40,7 @@ int main (int argc, char *argv[])
 	float startTime = 0.0;
 	float stopTime = 120.0;
 
-	int nClients = 1;
+	int nClients = 10;
 	unsigned int packetSize = 1000;
 
 	ns3::Config::SetDefault ("ns3::OnOffApplication::PacketSize", ns3::UintegerValue(packetSize));
@@ -87,7 +88,6 @@ int main (int argc, char *argv[])
 	ns3::InternetStackHelper stack;
 
 	stack.Install(routers);
-	// stack.SetTcp ("ns3::NscTcpL4Protocol","Library",ns3::StringValue("liblinux2.6.26.so"));
 	stack.Install(leftleaves);
 
 	// Install Traffic control helper
@@ -101,7 +101,25 @@ int main (int argc, char *argv[])
 
 	ns3::TrafficControlHelper tch;
 	tch.SetRootQueueDisc("ns3::PvPieQueueDisc");
-	ns3::QueueDiscContainer qdiscs = tch.Install(routerdevices.Get(0));
+	ns3::QueueDiscContainer pvpie = tch.Install(routerdevices.Get(0));
+
+	// Install gold markers
+	ns3::TrafficControlHelper tch_gold;
+	tch_gold.SetRootQueueDisc("ns3::PacketMarkerQueueDisc");
+	ns3::QueueDiscContainer goldMarkers;
+	for ( int i = 0; i < nClients / 2 ; ++i )
+	{
+		goldMarkers.Add(tch_gold.Install(leftleafdevices.Get(i)));
+	}
+
+	// Install silver markers
+	ns3::TrafficControlHelper tch_silver;
+	tch_silver.SetRootQueueDisc("ns3::PacketMarkerQueueDisc");
+	ns3::QueueDiscContainer silverMarkers;
+	for ( int i = nClients / 2; i < nClients; ++i )
+	{
+		silverMarkers.Add(tch_silver.Install(leftleafdevices.Get(i)));
+	}
 
 	// TODO: Redesign address allocating ( same helper )
 	ns3::Ipv4AddressHelper routerips = ns3::Ipv4AddressHelper("99.9.1.0", "255.255.255.0");
@@ -160,7 +178,7 @@ int main (int argc, char *argv[])
 	ns3::AsciiTraceHelper asciiTraceHelper;
 
 	ns3::Ptr<ns3::OutputStreamWrapper> qdiscLengthStream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/qdlen.bn");
-	ns3::Ptr<ns3::QueueDisc> qd = qdiscs.Get(0);
+	ns3::Ptr<ns3::QueueDisc> qd = pvpie.Get(0);
 	qd->TraceConnectWithoutContext ("PacketsInQueue", ns3::MakeBoundCallback(&TcPacketsInQueueTrace, qdiscLengthStream));
 
 	ns3::Ptr<ns3::PvPieQueueDisc> pqd = ns3::DynamicCast<ns3::PvPieQueueDisc>(qd);
@@ -179,4 +197,3 @@ int main (int argc, char *argv[])
 	ns3::Simulator::Destroy();
 	return 0;
 }
-
