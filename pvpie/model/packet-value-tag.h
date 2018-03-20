@@ -27,18 +27,15 @@ public:
   virtual void Print (std::ostream &os) const;
 
   // these are our accessors to our tag structure
-  /**
-   * Set the tag value
-   * \param value The tag value.
-   */
-  void SetSimpleValue (uint16_t value);
-  /**
-   * Get the tag value
-   * \return the tag value.
-   */
-  uint16_t GetSimpleValue (void) const;
+  void SetPacketValue (uint32_t);
+  uint32_t GetPacketValue (void) const;
+
+  void SetDelayClass (uint8_t);
+  uint8_t GetDelayClass (void) const;
+
 private:
-  uint16_t m_simpleValue;  //!< tag value
+  uint32_t m_packetValue;  //!< tag packet value
+  uint8_t m_delayClass;   //!< tag delay class
 };
 
 }

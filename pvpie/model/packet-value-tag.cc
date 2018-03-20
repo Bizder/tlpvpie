@@ -11,11 +11,16 @@ TypeId PacketValueTag::GetTypeId (void)
   static TypeId tid = TypeId (" ns3::PacketValueTag")
     .SetParent<Tag> ()
     .AddConstructor<PacketValueTag> ()
-    .AddAttribute ("SimpleValue",
-                   "A simple value",
-                   EmptyAttributeValue (),
-                   MakeUintegerAccessor (&PacketValueTag::GetSimpleValue),
-                   MakeUintegerChecker<uint16_t> ())
+    .AddAttribute ("PacketValue",
+                   "Packet Value",
+                   EmptyAttributeValue(),
+                   MakeUintegerAccessor (&PacketValueTag::GetPacketValue),
+                   MakeUintegerChecker<uint32_t>())
+    .AddAttribute ("DelayClass",
+                   "DelayClass",
+                   EmptyAttributeValue(),
+                   MakeUintegerAccessor (&PacketValueTag::GetDelayClass),
+                   MakeUintegerChecker<uint32_t>())
   ;
   return tid;
 }
@@ -27,32 +32,45 @@ TypeId PacketValueTag::GetInstanceTypeId (void) const
 
 uint32_t PacketValueTag::GetSerializedSize (void) const
 {
-  return 2;
+  return 5;
 }
 
 void PacketValueTag::Serialize (TagBuffer i) const
 {
-  i.WriteU16 (m_simpleValue);
+  i.WriteU32 (m_packetValue);
+  i.WriteU8 (m_delayClass);
 }
 
 void PacketValueTag::Deserialize (TagBuffer i)
 {
-  m_simpleValue = i.ReadU16();
+  m_packetValue = i.ReadU32();
+  m_delayClass = i.ReadU8();
 }
 
 void PacketValueTag::Print (std::ostream &os) const
 {
-  os << "v=" << (uint32_t)m_simpleValue;
+  os << "pv=" << (uint32_t)m_packetValue;
+  os << "dc=" << (uint32_t)m_delayClass;
 }
 
-void PacketValueTag::SetSimpleValue (uint16_t value)
+void PacketValueTag::SetPacketValue (uint32_t value)
 {
-  m_simpleValue = value;
+  m_packetValue = value;
 }
 
-uint16_t PacketValueTag::GetSimpleValue (void) const
+uint32_t PacketValueTag::GetPacketValue (void) const
 {
-  return m_simpleValue;
+  return m_packetValue;
+}
+
+void PacketValueTag::SetDelayClass(uint8_t delayClass)
+{
+  m_delayClass = delayClass;
+}
+
+uint8_t PacketValueTag::GetDelayClass(void) const
+{
+  return m_delayClass;
 }
 
 }

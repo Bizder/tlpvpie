@@ -40,6 +40,11 @@ static TypeId tid = TypeId ("ns3::PacketMarkerQueueDisc")
 	.SetParent<QueueDisc>()
 	.SetGroupName ("pvpie")
 	.AddConstructor<PacketMarkerQueueDisc>()
+	.AddAttribute ("A",
+					"Value of alpha in EWMA calculation",
+					DoubleValue (0.25),
+					MakeDoubleAccessor (&PacketMarkerQueueDisc::m_a),
+					MakeDoubleChecker<double> ())
 	;
 
 	return tid;
@@ -48,9 +53,8 @@ static TypeId tid = TypeId ("ns3::PacketMarkerQueueDisc")
 PacketMarkerQueueDisc::PacketMarkerQueueDisc() : QueueDisc()
 {
 	NS_LOG_FUNCTION (this);
-	// schedule iterative calculations
-	// initialize variables if needed
-
+	m_uv = CreateObject<UniformRandomVariable> ();
+	// m_rtrsEvent = Simulator::Schedule (m_sUpdate, &PvPieQueueDisc::CalculateP, this);
 }
 
 PacketMarkerQueueDisc::~PacketMarkerQueueDisc ()
@@ -61,31 +65,45 @@ PacketMarkerQueueDisc::~PacketMarkerQueueDisc ()
 void PacketMarkerQueueDisc::DoDispose (void)
 {
 	NS_LOG_FUNCTION (this);
+	m_uv = 0;
+	// Simulator::Remove (m_rtrsEvent);
 	QueueDisc::DoDispose();
+}
+
+int64_t PacketMarkerQueueDisc::AssignStreams (int64_t stream)
+{
+	NS_LOG_FUNCTION (this << stream);
+	m_uv->SetStream (stream);
+	return 1;
 }
 
 void PacketMarkerQueueDisc::InitializeParams(void)
 {
-	m_granularity = 150;
 	NS_LOG_INFO ("Initializing marker params.");
-	for ( int i = 0; i < m_granularity; ++i )
-	{
-		m_tokenBuckets.push_back(TokenBucket());
-	}
+	m_transferRate = 0;
+	m_lastSend = Time(Seconds(0));
 }
 
 bool PacketMarkerQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 {
 	NS_LOG_FUNCTION (this << item);
 
-	// get transfer rate here!
-	uint16_t pv = throughputValueFunction(64); // TODO: set current transfer rate
+	double u = m_uv->GetValue();
+	uint32_t packet_value = throughputValueFunction(m_transferRate * u);
 
 	PacketValueTag tag;
-	tag.SetSimpleValue(pv);
+	tag.SetPacketValue(packet_value);
+	tag.SetDelayClass(getPriority());
 	item->GetPacket()->AddPacketTag(tag);
 
 	bool retval = GetInternalQueue(0)->Enqueue(item);
+
+	Time now = Simulator::Now();
+	double time_delta = now.GetSeconds() - m_lastSend.GetSeconds();
+	uint32_t current_rate = item->GetSize() * 8 / time_delta;
+
+	m_transferRate = m_a * current_rate + ( 1 - m_a ) * m_transferRate;
+	m_lastSend = now;
 
 	NS_LOG_LOGIC ("\t bytesInQueue  " << GetInternalQueue (0)->GetNBytes ());
 	NS_LOG_LOGIC ("\t packetsInQueue  " << GetInternalQueue (0)->GetNPackets ());
@@ -143,7 +161,7 @@ bool PacketMarkerQueueDisc::CheckConfig (void)
 	if (GetNInternalQueues () == 0)
 	{
 		// create a DropTail queue
-		Ptr<InternalQueue> queue = CreateObjectWithAttributes<DropTailQueue<QueueDiscItem> > ("Mode", EnumValue(QUEUE_DISC_MODE_PACKETS));
+		Ptr<InternalQueue> queue = CreateObjectWithAttributes<DropTailQueue<QueueDiscItem> > ("Mode", EnumValue(QueueBase::QueueMode::QUEUE_MODE_PACKETS));
 		queue->SetMaxPackets (5);
 		AddInternalQueue (queue);
 	}
@@ -157,12 +175,15 @@ bool PacketMarkerQueueDisc::CheckConfig (void)
 	return true;
 }
 
-uint16_t PacketMarkerQueueDisc::throughputValueFunction(uint32_t rate_kbps)
+uint32_t PacketMarkerQueueDisc::throughputValueFunction(uint32_t rate_kbps)
 {
-	double y = 212500000.0 / 3123.0 - (2125.0 * rate_kbps ) / 3123.0;
-	return y > 0 ? (uint16_t)y : 0;;
+	return 0;
 }
 
+uint8_t PacketMarkerQueueDisc::getPriority()
+{
+	return 0;
+}
 
 NS_OBJECT_ENSURE_REGISTERED(GoldPacketMarkerQueueDisc);
 
@@ -177,10 +198,15 @@ static TypeId tid = TypeId ("ns3::GoldPacketMarkerQueueDisc")
 	return tid;
 }
 
-uint16_t GoldPacketMarkerQueueDisc::throughputValueFunction(uint32_t rate_kbps)
+uint32_t GoldPacketMarkerQueueDisc::throughputValueFunction(uint32_t rate_kbps)
 {
 	double y = 212500000.0 / 3123.0 - (2125.0 * rate_kbps ) / 3123.0;
-	return y > 0 ? (uint16_t)y : 0;;
+	return y > 0 ? (uint32_t)y : 0;
+}
+
+uint8_t GoldPacketMarkerQueueDisc::getPriority()
+{
+	return 1;
 }
 
 
@@ -197,12 +223,15 @@ static TypeId tid = TypeId ("ns3::SilverPacketMarkerQueueDisc")
 	return tid;
 }
 
-uint16_t SilverPacketMarkerQueueDisc::throughputValueFunction(uint32_t rate_kbps)
+uint32_t SilverPacketMarkerQueueDisc::throughputValueFunction(uint32_t rate_kbps)
 {
-	double y = 212500000.0 / 3123.0 - ( 4250.0 * rate_kbps )/ 3123.0;
-	return y > 0 ? (uint16_t)y : 0;
+	double y = 212500000.0 / 3123.0 - ( 4250.0 * rate_kbps ) / 3123.0;
+	return y > 0 ? (uint32_t)y : 0;
 }
 
-
+uint8_t SilverPacketMarkerQueueDisc::getPriority()
+{
+	return 2;
+}
 
 } /* namespace ns3 */

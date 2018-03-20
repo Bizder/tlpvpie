@@ -115,7 +115,7 @@ int main (int argc, char *argv[])
 
 	// Install silver markers
 	ns3::TrafficControlHelper tch_silver;
-	tch_silver.SetRootQueueDisc("ns3::GoldPacketMarkerQueueDisc");
+	tch_silver.SetRootQueueDisc("ns3::SilverPacketMarkerQueueDisc");
 	ns3::QueueDiscContainer silverMarkers;
 	for ( int i = nClients / 2; i < nClients; ++i )
 	{

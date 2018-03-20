@@ -239,7 +239,7 @@ bool PvPieQueueDisc::DropEarly (Ptr<QueueDiscItem> item, uint32_t qSize)
 
 	PacketValueTag tag;
 	item->GetPacket()->PeekPacketTag(tag);
-	// std::cerr << tag.GetSimpleValue() << std::endl;
+	std::cerr << (uint16_t)tag.GetDelayClass() << " "<< tag.GetPacketValue() << std::endl;
 
 	if (u > p)
 	{

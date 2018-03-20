@@ -11,5 +11,8 @@ TODO:
 	comment: Marker sets a bytetag for every packet (ns3 only, not included in real IP header)
 [x] Rework MyTag class to have meaningful names
 [x] PVPIE -> Check for header field (tag)
-[ ] Marker rate calculation (EWMA)
+[x] Marker rate calculation (EWMA)
+[x] Add delay class to tags for easier statistics
 [ ] PVPIE - eCDF function
+[ ] PIE to PVPIE modification
+[ ]
