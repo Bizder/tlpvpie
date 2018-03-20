@@ -24,7 +24,6 @@ Tocken buckets:
 #include "ns3/drop-tail-queue.h"
 #include "ns3/net-device-queue-interface.h"
 #include "ns3/queue-disc.h"
-
 #include "packet-marker-queue-disc.h"
 #include "packet-value-tag.h"
 
@@ -79,9 +78,10 @@ bool PacketMarkerQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 {
 	NS_LOG_FUNCTION (this << item);
 
-	uint16_t pv = 3333;
+	// get transfer rate here!
+	uint16_t pv = throughputValueFunction(64); // TODO: set current transfer rate
 
-	MyTag tag;
+	PacketValueTag tag;
 	tag.SetSimpleValue(pv);
 	item->GetPacket()->AddPacketTag(tag);
 
@@ -157,6 +157,51 @@ bool PacketMarkerQueueDisc::CheckConfig (void)
 	return true;
 }
 
+uint16_t PacketMarkerQueueDisc::throughputValueFunction(uint32_t rate_kbps)
+{
+	double y = 212500000.0 / 3123.0 - (2125.0 * rate_kbps ) / 3123.0;
+	return y > 0 ? (uint16_t)y : 0;;
+}
+
+
+NS_OBJECT_ENSURE_REGISTERED(GoldPacketMarkerQueueDisc);
+
+TypeId GoldPacketMarkerQueueDisc::GetTypeId (void)
+{
+static TypeId tid = TypeId ("ns3::GoldPacketMarkerQueueDisc")
+	.SetParent<PacketMarkerQueueDisc>()
+	.SetGroupName ("pvpie")
+	.AddConstructor<GoldPacketMarkerQueueDisc>()
+	;
+
+	return tid;
+}
+
+uint16_t GoldPacketMarkerQueueDisc::throughputValueFunction(uint32_t rate_kbps)
+{
+	double y = 212500000.0 / 3123.0 - (2125.0 * rate_kbps ) / 3123.0;
+	return y > 0 ? (uint16_t)y : 0;;
+}
+
+
+NS_OBJECT_ENSURE_REGISTERED(SilverPacketMarkerQueueDisc);
+
+TypeId SilverPacketMarkerQueueDisc::GetTypeId (void)
+{
+static TypeId tid = TypeId ("ns3::SilverPacketMarkerQueueDisc")
+	.SetParent<PacketMarkerQueueDisc>()
+	.SetGroupName ("pvpie")
+	.AddConstructor<SilverPacketMarkerQueueDisc>()
+	;
+
+	return tid;
+}
+
+uint16_t SilverPacketMarkerQueueDisc::throughputValueFunction(uint32_t rate_kbps)
+{
+	double y = 212500000.0 / 3123.0 - ( 4250.0 * rate_kbps )/ 3123.0;
+	return y > 0 ? (uint16_t)y : 0;
+}
 
 
 

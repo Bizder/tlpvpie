@@ -91,7 +91,8 @@ int main (int argc, char *argv[])
 	stack.Install(leftleaves);
 
 	// Install Traffic control helper
-	ns3::Config::SetDefault("ns3::PvPieQueueDisc::Mode", ns3::StringValue("QUEUE_DISC_MODE_PACKETS"));
+	ns3::Config::SetDefault("ns3::PvPieQueueDisc::Mode", ns3::StringValue("QUEUE_DISC_MODE_BYTES"));
+	ns3::Config::SetDefault("ns3::PvPieQueueDisc::QueueLimit", ns3::UintegerValue(25000)); // 25 kb
 	ns3::Config::SetDefault("ns3::PvPieQueueDisc::QueueDelayReference", ns3::TimeValue(ns3::MilliSeconds (20))); // 40 ms
 	ns3::Config::SetDefault("ns3::PvPieQueueDisc::Tupdate", ns3::TimeValue(ns3::MilliSeconds (32))); // 32 ms
 	ns3::Config::SetDefault("ns3::PvPieQueueDisc::DequeueThreshold", ns3::UintegerValue(10000)); // 10 Kb for packets between 1Kb and 1,5Kb
@@ -105,7 +106,7 @@ int main (int argc, char *argv[])
 
 	// Install gold markers
 	ns3::TrafficControlHelper tch_gold;
-	tch_gold.SetRootQueueDisc("ns3::PacketMarkerQueueDisc");
+	tch_gold.SetRootQueueDisc("ns3::GoldPacketMarkerQueueDisc");
 	ns3::QueueDiscContainer goldMarkers;
 	for ( int i = 0; i < nClients / 2 ; ++i )
 	{
@@ -114,7 +115,7 @@ int main (int argc, char *argv[])
 
 	// Install silver markers
 	ns3::TrafficControlHelper tch_silver;
-	tch_silver.SetRootQueueDisc("ns3::PacketMarkerQueueDisc");
+	tch_silver.SetRootQueueDisc("ns3::GoldPacketMarkerQueueDisc");
 	ns3::QueueDiscContainer silverMarkers;
 	for ( int i = nClients / 2; i < nClients; ++i )
 	{

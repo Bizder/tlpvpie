@@ -6,51 +6,51 @@
 
 namespace ns3 {
 
-TypeId MyTag::GetTypeId (void)
+TypeId PacketValueTag::GetTypeId (void)
 {
-  static TypeId tid = TypeId (" ns3::MyTag")
+  static TypeId tid = TypeId (" ns3::PacketValueTag")
     .SetParent<Tag> ()
-    .AddConstructor<MyTag> ()
+    .AddConstructor<PacketValueTag> ()
     .AddAttribute ("SimpleValue",
                    "A simple value",
                    EmptyAttributeValue (),
-                   MakeUintegerAccessor (&MyTag::GetSimpleValue),
+                   MakeUintegerAccessor (&PacketValueTag::GetSimpleValue),
                    MakeUintegerChecker<uint16_t> ())
   ;
   return tid;
 }
 
-TypeId MyTag::GetInstanceTypeId (void) const
+TypeId PacketValueTag::GetInstanceTypeId (void) const
 {
   return GetTypeId ();
 }
 
-uint32_t MyTag::GetSerializedSize (void) const
+uint32_t PacketValueTag::GetSerializedSize (void) const
 {
   return 2;
 }
 
-void MyTag::Serialize (TagBuffer i) const
+void PacketValueTag::Serialize (TagBuffer i) const
 {
   i.WriteU16 (m_simpleValue);
 }
 
-void MyTag::Deserialize (TagBuffer i)
+void PacketValueTag::Deserialize (TagBuffer i)
 {
   m_simpleValue = i.ReadU16();
 }
 
-void MyTag::Print (std::ostream &os) const
+void PacketValueTag::Print (std::ostream &os) const
 {
   os << "v=" << (uint32_t)m_simpleValue;
 }
 
-void MyTag::SetSimpleValue (uint16_t value)
+void PacketValueTag::SetSimpleValue (uint16_t value)
 {
   m_simpleValue = value;
 }
 
-uint16_t MyTag::GetSimpleValue (void) const
+uint16_t PacketValueTag::GetSimpleValue (void) const
 {
   return m_simpleValue;
 }

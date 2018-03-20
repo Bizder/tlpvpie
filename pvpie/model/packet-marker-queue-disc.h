@@ -25,6 +25,8 @@ class PacketMarkerQueueDisc : public QueueDisc {
 		virtual void DoDispose (void);
 
 	private:
+		virtual uint16_t throughputValueFunction(uint32_t);
+
 		virtual bool DoEnqueue (Ptr<QueueDiscItem> item);
 
 		virtual Ptr<QueueDiscItem> DoDequeue (void);
@@ -33,12 +35,34 @@ class PacketMarkerQueueDisc : public QueueDisc {
 		virtual bool CheckConfig (void);
 		virtual void InitializeParams (void);
 
-
-		// ** Variables maintained by PIE
+		// ** Variables maintained by Marker
 		std::vector<TokenBucket> m_tokenBuckets;
 		int32_t m_granularity;
 
 };
+
+class GoldPacketMarkerQueueDisc : public PacketMarkerQueueDisc {
+	public:
+		static TypeId GetTypeId (void);
+		GoldPacketMarkerQueueDisc() : PacketMarkerQueueDisc() {};
+		virtual ~GoldPacketMarkerQueueDisc() {};
+
+	private:
+		uint16_t throughputValueFunction(uint32_t);
+};
+
+class SilverPacketMarkerQueueDisc : public PacketMarkerQueueDisc {
+	public:
+		static TypeId GetTypeId (void);
+		SilverPacketMarkerQueueDisc() : PacketMarkerQueueDisc() {};
+		virtual ~SilverPacketMarkerQueueDisc() {};
+
+	private:
+		uint16_t throughputValueFunction(uint32_t);
+
+};
+
+
 
 }
 

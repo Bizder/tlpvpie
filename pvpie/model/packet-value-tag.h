@@ -12,7 +12,7 @@ namespace ns3 {
  * \ingroup network
  * A simple example of an Tag implementation
  */
-class MyTag : public Tag
+class PacketValueTag : public Tag
 {
 public:
   /**
