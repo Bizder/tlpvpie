@@ -9,6 +9,7 @@
 #include "ns3/timer.h"
 #include "ns3/event-id.h"
 #include "ns3/random-variable-stream.h"
+#include "ecdf.h"
 
 #define BURST_RESET_TIMEOUT 1.5
 
@@ -63,7 +64,7 @@ class PvPieQueueDisc : public QueueDisc {
 		* \param qSize queue size
 		* \returns 0 for no drop, 1 for drop
 		*/
-		bool DropEarly(Ptr<QueueDiscItem> item, uint32_t qSize);
+		bool DropEarly(Ptr<QueueDiscItem> item, uint32_t qSize, uint32_t packetValue);
 
 		void CalculateP();
 
@@ -92,6 +93,8 @@ class PvPieQueueDisc : public QueueDisc {
 		uint32_t m_dqCount;                           //!< Number of bytes departed since current measurement cycle starts
 		EventId m_rtrsEvent;                          //!< Event used to decide the decision of interval of drop probability calculation
 		Ptr<UniformRandomVariable> m_uv;              //!< Rng stream
+		eCDF ecdf;                                    //!< eCDF function used to determine packet value
+
 
 };
 

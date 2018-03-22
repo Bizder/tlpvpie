@@ -15,6 +15,7 @@ def build(bld):
         'model/packet-marker-queue-disc.cc',
         'model/token-bucket.cc',
         'model/packet-value-tag.cc',
+        'model/ecdf.cc',
     ]
 
     module_test = bld.create_ns3_module_test_library('pvpie')
@@ -30,6 +31,7 @@ def build(bld):
         'model/packet-marker-queue-disc.h',
         'model/token-bucket.h',
         'model/packet-value-tag.h',
+        'model/ecdf.h',
     ]
 
     if bld.env.ENABLE_EXAMPLES:

@@ -2,10 +2,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-OUTPUTFOLDER = "d:/Projects/PVPIE-ns3/output/"
+OUTPUTFOLDER = "c:/Users/tokodi/STUDY/ns3-container/output/"
+
+OUTPUTFOLDER = OUTPUTFOLDER if OUTPUTFOLDER.endswith('/') else OUTPUTFOLDER + '/'
 
 # probability
-
 with open(OUTPUTFOLDER + 'ascii/p.bn', 'rb') as p_file:
 	xs = []
 	ys = []

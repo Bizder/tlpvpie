@@ -171,7 +171,13 @@ bool PvPieQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 {
 	NS_LOG_FUNCTION (this << item);
 
-	uint32_t nQueued = GetQueueSize ();
+	uint32_t nQueued = GetQueueSize();
+
+	PacketValueTag tag;
+	item->GetPacket()->PeekPacketTag(tag);
+	// std::cerr << (uint16_t)tag.GetDelayClass() << " "<< tag.GetPacketValue() << std::endl;
+	ecdf.AddValue(Simulator::Now(), tag.GetPacketValue());
+
 
 	if ((GetMode () == QUEUE_DISC_MODE_PACKETS && nQueued >= m_queueLimit)
 		|| (GetMode () == QUEUE_DISC_MODE_BYTES && nQueued + item->GetSize () > m_queueLimit))
@@ -180,7 +186,7 @@ bool PvPieQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 		DropBeforeEnqueue (item, FORCED_DROP);
 		return false;
 	}
-	else if (DropEarly (item, nQueued))
+	else if (DropEarly (item, nQueued, tag.GetPacketValue()))
 	{
 		// Early probability drop: proactive
 		DropBeforeEnqueue (item, UNFORCED_DROP);
@@ -199,7 +205,7 @@ bool PvPieQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 	return retval;
 }
 
-bool PvPieQueueDisc::DropEarly (Ptr<QueueDiscItem> item, uint32_t qSize)
+bool PvPieQueueDisc::DropEarly (Ptr<QueueDiscItem> item, uint32_t qSize, uint32_t packet_value)
 {
 	NS_LOG_FUNCTION (this << item << qSize);
 	if (m_burstAllowance.GetSeconds () > 0)
@@ -236,10 +242,6 @@ bool PvPieQueueDisc::DropEarly (Ptr<QueueDiscItem> item, uint32_t qSize)
 	{
 		return false;
 	}
-
-	PacketValueTag tag;
-	item->GetPacket()->PeekPacketTag(tag);
-	std::cerr << (uint16_t)tag.GetDelayClass() << " "<< tag.GetPacketValue() << std::endl;
 
 	if (u > p)
 	{
@@ -369,7 +371,7 @@ Ptr<QueueDiscItem> PvPieQueueDisc::DoDequeue ()
 	}
 
 	Ptr<QueueDiscItem> item = GetInternalQueue (0)->Dequeue ();
-	double now = Simulator::Now ().GetSeconds ();
+	double now = Simulator::Now().GetSeconds();
 	uint32_t pktSize = item->GetSize ();
 
 	// if not in a measurement cycle and the queue has built up to dq_threshold,
