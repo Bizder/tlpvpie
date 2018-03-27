@@ -8,7 +8,6 @@
 #include "ns3/data-rate.h"
 #include "ns3/timer.h"
 #include "ns3/event-id.h"
-#include "ns3/random-variable-stream.h"
 #include "ecdf.h"
 
 #define BURST_RESET_TIMEOUT 1.5
@@ -17,9 +16,9 @@ namespace ns3 {
 
 class PvPieQueueDisc : public QueueDisc {
 	public:
-		static TypeId GetTypeId (void);
-		PvPieQueueDisc ();
-		virtual ~PvPieQueueDisc();
+		static TypeId GetTypeId(void);
+		PvPieQueueDisc (void);
+		virtual ~PvPieQueueDisc(void);
 
 		enum BurstStateT
 		{
@@ -28,35 +27,24 @@ class PvPieQueueDisc : public QueueDisc {
 			IN_BURST_PROTECTING,
 		};
 
-		enum QueueDiscMode
-		{
-			QUEUE_DISC_MODE_PACKETS, /**< Use number of packets for maximum queue disc size */
-			QUEUE_DISC_MODE_BYTES,   /**< Use number of bytes   for maximum queue disc size */
-		};
-
-		void SetMode (QueueDiscMode mode);
-		QueueDiscMode GetMode (void);
-
 		uint32_t GetQueueSize(void);
 		void SetQueueLimit (uint32_t lim);
 
-		Time GetQueueDelay (void);
-
-		int64_t AssignStreams (int64_t stream);
+		Time GetQueueDelay(void);
 
 		static constexpr const char* UNFORCED_DROP = "Unforced drop";  //!< Early probability drops: proactive
 		static constexpr const char* FORCED_DROP = "Forced drop";      //!< Drops due to queue limit: reactive
 
 	protected:
-		virtual void DoDispose (void);
+		virtual void DoDispose(void);
 
 	private:
 		virtual bool DoEnqueue (Ptr<QueueDiscItem> item);
-		virtual Ptr<QueueDiscItem> DoDequeue (void);
-		virtual Ptr<const QueueDiscItem> DoPeek (void) const;
-		virtual bool CheckConfig (void);
+		virtual Ptr<QueueDiscItem> DoDequeue(void);
+		virtual Ptr<const QueueDiscItem> DoPeek(void) const;
+		virtual bool CheckConfig(void);
 
-		virtual void InitializeParams (void);
+		virtual void InitializeParams(void);
 
 		/**
 		* \brief Check if a packet needs to be dropped due to probability drop
@@ -66,13 +54,11 @@ class PvPieQueueDisc : public QueueDisc {
 		*/
 		bool DropEarly(Ptr<QueueDiscItem> item, uint32_t qSize, uint32_t packetValue);
 
-		void CalculateP();
+		void CalculateP(void);
 
 		// ** Variables supplied by user
-		QueueDiscMode m_mode;                         //!< Mode (bytes or packets)
-		uint32_t m_queueLimit;                        //!< Queue limit in bytes / packets
-		Time m_sUpdate;                               //!< Start time of the update timer
-		Time m_tUpdate;                               //!< Time period after which CalculateP () is called
+		uint32_t m_queueLimit;                        //!< Queue limit in bytes
+		Time m_tUpdate;                               //!< Time period after which CalculateP() is called
 		Time m_qDelayRef;                             //!< Desired queue delay
 		uint32_t m_meanPktSize;                       //!< Average packet size in bytes
 		Time m_maxBurst;                              //!< Maximum burst allowed before random early dropping kicks in
@@ -81,7 +67,7 @@ class PvPieQueueDisc : public QueueDisc {
 		uint32_t m_dqThreshold;                       //!< Minimum queue size in bytes before dequeue rate is measured
 
 		// ** Variables maintained by PIE
-		TracedValue<double> m_dropProb;               //!< Variable used in calculation of drop probability
+		TracedValue<double> m_thresholdValue;         //!< Filter value - V
 		Time m_qDelayOld;                             //!< Old value of queue delay
 		TracedValue<Time> m_qDelay;                   //!< Current value of queue delay
 		Time m_burstAllowance;                        //!< Current max burst value in seconds that is allowed before random drops kick in
@@ -92,9 +78,7 @@ class PvPieQueueDisc : public QueueDisc {
 		double m_dqStart;                             //!< Start timestamp of current measurement cycle
 		uint32_t m_dqCount;                           //!< Number of bytes departed since current measurement cycle starts
 		EventId m_rtrsEvent;                          //!< Event used to decide the decision of interval of drop probability calculation
-		Ptr<UniformRandomVariable> m_uv;              //!< Rng stream
-		eCDF ecdf;                                    //!< eCDF function used to determine packet value
-
+		eCDF m_ecdf;                                  //!< eCDF function used to determine packet value
 
 };
 

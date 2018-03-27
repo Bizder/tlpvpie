@@ -17,18 +17,12 @@ NS_LOG_COMPONENT_DEFINE("PvPieQueueDisc");
 
 NS_OBJECT_ENSURE_REGISTERED(PvPieQueueDisc);
 
-TypeId PvPieQueueDisc::GetTypeId (void)
+TypeId PvPieQueueDisc::GetTypeId(void)
 {
 static TypeId tid = TypeId ("ns3::PvPieQueueDisc")
 	.SetParent<QueueDisc> ()
 	.SetGroupName ("pvpie")
 	.AddConstructor<PvPieQueueDisc> ()
-	.AddAttribute ("Mode",
-					"Determines unit for QueueLimit",
-					EnumValue (QUEUE_DISC_MODE_PACKETS),
-					MakeEnumAccessor (&PvPieQueueDisc::SetMode),
-					MakeEnumChecker (QUEUE_DISC_MODE_BYTES, "QUEUE_DISC_MODE_BYTES",
-									QUEUE_DISC_MODE_PACKETS, "QUEUE_DISC_MODE_PACKETS"))
 	.AddAttribute ("MeanPktSize",
 					"Average of packet size",
 					UintegerValue (64),
@@ -49,16 +43,11 @@ static TypeId tid = TypeId ("ns3::PvPieQueueDisc")
 					TimeValue (Seconds (0.032)),
 					MakeTimeAccessor (&PvPieQueueDisc::m_tUpdate),
 					MakeTimeChecker ())
-	.AddAttribute ("Supdate",
-					"Start time of the update timer",
-					TimeValue (Seconds (0)),
-					MakeTimeAccessor (&PvPieQueueDisc::m_sUpdate),
-					MakeTimeChecker ())
 	.AddAttribute ("QueueLimit",
 					"Queue limit in bytes/packets",
-					UintegerValue (25),
-					MakeUintegerAccessor (&PvPieQueueDisc::SetQueueLimit),
-					MakeUintegerChecker<uint32_t> ())
+					UintegerValue(100000), // 100 kbytes
+					MakeUintegerAccessor(&PvPieQueueDisc::SetQueueLimit),
+					MakeUintegerChecker<uint32_t>())
 	.AddAttribute ("DequeueThreshold",
 					"Minimum queue size in bytes before dequeue rate is measured",
 					UintegerValue (10000),
@@ -74,10 +63,6 @@ static TypeId tid = TypeId ("ns3::PvPieQueueDisc")
 					TimeValue (Seconds (0.1)),
 					MakeTimeAccessor (&PvPieQueueDisc::m_maxBurst),
 					MakeTimeChecker ())
-	.AddTraceSource("Probability",
-					"Probability of packet droping",
-					MakeTraceSourceAccessor (&PvPieQueueDisc::m_dropProb),
-					"ns3::TracedValueCallback::Double")
 	.AddTraceSource("QueueingDelay",
 					"Queueing Delay",
 					MakeTraceSourceAccessor (&PvPieQueueDisc::m_qDelay),
@@ -87,15 +72,14 @@ static TypeId tid = TypeId ("ns3::PvPieQueueDisc")
 	return tid;
 }
 
-PvPieQueueDisc::PvPieQueueDisc () : QueueDisc ()
+PvPieQueueDisc::PvPieQueueDisc(void) : QueueDisc ()
 {
 	NS_LOG_FUNCTION (this);
-	m_uv = CreateObject<UniformRandomVariable> ();
-	m_rtrsEvent = Simulator::Schedule (m_sUpdate, &PvPieQueueDisc::CalculateP, this);
-	ecdf = eCDF();
+	m_rtrsEvent = Simulator::Schedule(TimeValue(Seconds(0)), &PvPieQueueDisc::CalculateP, this);
+	m_ecdf = eCDF();
 }
 
-PvPieQueueDisc::~PvPieQueueDisc ()
+PvPieQueueDisc::~PvPieQueueDisc(void)
 {
 	NS_LOG_FUNCTION (this);
 }
@@ -103,85 +87,52 @@ PvPieQueueDisc::~PvPieQueueDisc ()
 void PvPieQueueDisc::DoDispose (void)
 {
 	NS_LOG_FUNCTION (this);
-	m_uv = 0;
-	Simulator::Remove (m_rtrsEvent);
-	QueueDisc::DoDispose ();
+	Simulator::Remove(m_rtrsEvent);
+	QueueDisc::DoDispose();
 }
 
-void PvPieQueueDisc::SetMode (QueueDiscMode mode)
-{
-  NS_LOG_FUNCTION (this << mode);
-  m_mode = mode;
-}
-
-PvPieQueueDisc::QueueDiscMode PvPieQueueDisc::GetMode (void)
-{
-  NS_LOG_FUNCTION (this);
-  return m_mode;
-}
-
-void PvPieQueueDisc::SetQueueLimit (uint32_t lim)
+void PvPieQueueDisc::SetQueueLimit(uint32_t lim)
 {
   NS_LOG_FUNCTION (this << lim);
   m_queueLimit = lim;
 }
 
-uint32_t PvPieQueueDisc::GetQueueSize (void)
+uint32_t PvPieQueueDisc::GetQueueSize(void)
 {
 	NS_LOG_FUNCTION (this);
-	if (GetMode () == QUEUE_DISC_MODE_BYTES)
-	{
-		return GetInternalQueue (0)->GetNBytes ();
-	}
-	else if (GetMode () == QUEUE_DISC_MODE_PACKETS)
-	{
-		return GetInternalQueue (0)->GetNPackets ();
-	}
-	else
-	{
-		NS_ABORT_MSG ("Unknown PIE mode.");
-	}
+	return GetInternalQueue(0)->GetNBytes();
 }
 
-Time PvPieQueueDisc::GetQueueDelay (void)
+Time PvPieQueueDisc::GetQueueDelay(void)
 {
 	NS_LOG_FUNCTION (this);
 	return m_qDelay;
 }
 
-int64_t PvPieQueueDisc::AssignStreams (int64_t stream)
-{
-	NS_LOG_FUNCTION (this << stream);
-	m_uv->SetStream (stream);
-	return 1;
-}
-
-void PvPieQueueDisc::InitializeParams (void)
+void PvPieQueueDisc::InitializeParams(void)
 {
 	// Initially queue is empty so variables are initialize to zero except m_dqCount
 	m_inMeasurement = false;
 	m_dqCount = -1;
-	m_dropProb = 0;
+	m_thresholdValue = 0;
 	m_avgDqRate = 0.0;
 	m_dqStart = 0;
 	m_burstState = NO_BURST;
 	m_qDelayOld = Time(Seconds(0));
 }
 
-bool PvPieQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
+bool PvPieQueueDisc::DoEnqueue(Ptr<QueueDiscItem> item)
 {
 	NS_LOG_FUNCTION (this << item);
 
+	// Upon packet arrival randomly drop a packet with a probability p.
 	uint32_t nQueued = GetQueueSize();
 
 	PacketValueTag tag;
 	item->GetPacket()->PeekPacketTag(tag);
-	// std::cerr << (uint16_t)tag.GetDelayClass() << " "<< tag.GetPacketValue() << std::endl;
-	ecdf.AddValue(Simulator::Now(), tag.GetPacketValue());
+	m_ecdf.AddValue(Simulator::Now(), tag.GetPacketValue());
 
-
-	if ((GetMode () == QUEUE_DISC_MODE_PACKETS && nQueued >= m_queueLimit)
-		|| (GetMode () == QUEUE_DISC_MODE_BYTES && nQueued + item->GetSize () > m_queueLimit))
+	if (nQueued + item->GetSize () > m_queueLimit)
 	{
 		// Drops due to queue limit: reactive
 		DropBeforeEnqueue (item, FORCED_DROP);
@@ -206,10 +157,10 @@ bool PvPieQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 	return retval;
 }
 
-bool PvPieQueueDisc::DropEarly (Ptr<QueueDiscItem> item, uint32_t qSize, uint32_t packet_value)
+bool PvPieQueueDisc::DropEarly(Ptr<QueueDiscItem> item, uint32_t qSize, uint32_t packet_value)
 {
 	NS_LOG_FUNCTION (this << item << qSize);
-	if (m_burstAllowance.GetSeconds () > 0)
+	if (m_burstAllowance.GetSeconds() > 0)
 	{
 		// If there is still burst_allowance left, skip random early drop.
 		return false;
@@ -221,41 +172,26 @@ bool PvPieQueueDisc::DropEarly (Ptr<QueueDiscItem> item, uint32_t qSize, uint32_
 		m_burstAllowance = m_maxBurst;
 	}
 
-	double p = m_dropProb;
+	uint32_t packetSize = item->GetSize();
 
-	uint32_t packetSize = item->GetSize ();
-
-	if (GetMode () == QUEUE_DISC_MODE_BYTES)
-	{
-		p = p * packetSize / m_meanPktSize;
-	}
-	double u =  m_uv->GetValue ();
-
-	if ((m_qDelayOld.GetSeconds () < (0.5 * m_qDelayRef.GetSeconds ())) && (m_dropProb < 0.2))
-	{
-		return false;
-	}
-	else if (GetMode() == QUEUE_DISC_MODE_BYTES && qSize <= 2 * m_meanPktSize)
-	{
-		return false;
-	}
-	else if (GetMode() == QUEUE_DISC_MODE_PACKETS && qSize <= 2)
+	// if ((m_qDelayOld.GetSeconds() < (0.5 * m_qDelayRef.GetSeconds())) && (m_dropProb < 0.2))
+	// {
+	// 	return false;
+	// }
+	// else if (qSize <= 2 * m_meanPktSize)
+	if (qSize <= 2 * m_meanPktSize)
 	{
 		return false;
 	}
 
-	if (u > p)
-	{
-		return false;
-	}
-	return true;
+	return packet_value >= m_thresholdValue;
 }
 
-void PvPieQueueDisc::CalculateP()
+void PvPieQueueDisc::CalculateP(void)
 {
 	NS_LOG_FUNCTION (this);
 
-	ecdf.RemoveOldValues();
+	m_ecdf.RemoveOldValues();
 
 	Time qDelay;
 	double p = 0.0;
@@ -272,7 +208,7 @@ void PvPieQueueDisc::CalculateP()
 
 	m_qDelay = qDelay;
 
-	if (m_burstAllowance.GetSeconds () > 0)
+	if (m_burstAllowance.GetSeconds() > 0)
 	{
 		m_dropProb = 0;
 	}
@@ -323,6 +259,9 @@ void PvPieQueueDisc::CalculateP()
 	}
 
 	m_dropProb = (p > 0) ? p : 0;
+
+	m_thresholdValue = ecdf.GetThresholdValue(p);
+
 	if (m_burstAllowance < m_tUpdate)
 	{
 		m_burstAllowance =  Time (Seconds (0));
@@ -364,7 +303,7 @@ void PvPieQueueDisc::CalculateP()
 	m_rtrsEvent = Simulator::Schedule (m_tUpdate, &PvPieQueueDisc::CalculateP, this);
 }
 
-Ptr<QueueDiscItem> PvPieQueueDisc::DoDequeue ()
+Ptr<QueueDiscItem> PvPieQueueDisc::DoDequeue(void)
 {
 	NS_LOG_FUNCTION (this);
 
@@ -428,70 +367,48 @@ Ptr<QueueDiscItem> PvPieQueueDisc::DoDequeue ()
 	return item;
 }
 
-Ptr<const QueueDiscItem> PvPieQueueDisc::DoPeek () const
+Ptr<const QueueDiscItem> PvPieQueueDisc::DoPeek(void) const
 {
 	NS_LOG_FUNCTION (this);
-	if (GetInternalQueue (0)->IsEmpty ())
+	if (GetInternalQueue (0)->IsEmpty())
 	{
 		NS_LOG_LOGIC ("Queue empty");
 		return 0;
 	}
 
-	Ptr<const QueueDiscItem> item = GetInternalQueue (0)->Peek ();
+	Ptr<const QueueDiscItem> item = GetInternalQueue(0)->Peek();
 
-	NS_LOG_LOGIC ("Number packets " << GetInternalQueue (0)->GetNPackets ());
-	NS_LOG_LOGIC ("Number bytes " << GetInternalQueue (0)->GetNBytes ());
+	NS_LOG_LOGIC ("Number packets " << GetInternalQueue(0)->GetNPackets());
+	NS_LOG_LOGIC ("Number bytes " << GetInternalQueue(0)->GetNBytes());
 
 	return item;
 }
 
-bool PvPieQueueDisc::CheckConfig (void)
+bool PvPieQueueDisc::CheckConfig(void)
 {
 	NS_LOG_FUNCTION (this);
-	if (GetNQueueDiscClasses () > 0)
+	if (GetNQueueDiscClasses() > 0)
 	{
 		NS_LOG_ERROR ("PvPieQueueDisc cannot have classes");
 		return false;
 	}
 
-	if (GetNPacketFilters () > 0)
+	if (GetNPacketFilters() > 0)
 	{
 		NS_LOG_ERROR ("PvPieQueueDisc cannot have packet filters");
 		return false;
 	}
 
-	if (GetNInternalQueues () == 0)
+	if (GetNInternalQueues() == 0)
 	{
-		// create a DropTail queue
-		Ptr<InternalQueue> queue = CreateObjectWithAttributes<DropTailQueue<QueueDiscItem> > ("Mode", EnumValue (m_mode));
-		if (m_mode == QUEUE_DISC_MODE_PACKETS)
-		{
-			queue->SetMaxPackets (m_queueLimit);
-		}
-		else
-		{
-			queue->SetMaxBytes (m_queueLimit);
-		}
-		AddInternalQueue (queue);
+		Ptr<InternalQueue> queue = CreateObjectWithAttributes<DropTailQueue<QueueDiscItem> > ("Mode", EnumValue(QueueBase::QueueMode::QUEUE_MODE_PACKETS));
+		queue->SetMaxBytes(m_queueLimit);
+		AddInternalQueue(queue);
 	}
 
 	if (GetNInternalQueues () != 1)
 	{
 		NS_LOG_ERROR ("PvPieQueueDisc needs 1 internal queue");
-		return false;
-	}
-
-	if ((GetInternalQueue (0)->GetMode () == QueueBase::QUEUE_MODE_PACKETS && m_mode == QUEUE_DISC_MODE_BYTES) ||
-		(GetInternalQueue (0)->GetMode () == QueueBase::QUEUE_MODE_BYTES && m_mode == QUEUE_DISC_MODE_PACKETS))
-	{
-		NS_LOG_ERROR ("The mode of the provided queue does not match the mode set on the PvPieQueueDisc");
-		return false;
-	}
-
-	if ((m_mode ==  QUEUE_DISC_MODE_PACKETS && GetInternalQueue (0)->GetMaxPackets () != m_queueLimit)
-		|| (m_mode ==  QUEUE_DISC_MODE_BYTES && GetInternalQueue (0)->GetMaxBytes () != m_queueLimit))
-	{
-		NS_LOG_ERROR ("The size of the internal queue differs from the queue disc limit");
 		return false;
 	}
 

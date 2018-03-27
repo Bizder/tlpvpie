@@ -58,7 +58,7 @@ int main (int argc, char *argv[])
 	bottleNeckLink.SetDeviceAttribute("DataRate", ns3::StringValue(bottleneckBandwidth));
 	bottleNeckLink.SetChannelAttribute("Delay", ns3::StringValue(bottleneckDelay));
 	// Limit the capacity o device queue
-	bottleNeckLink.SetQueue ("ns3::DropTailQueue", "Mode", ns3::StringValue ("QUEUE_MODE_PACKETS"), "MaxPackets", ns3::UintegerValue (1));
+	bottleNeckLink.SetQueue ("ns3::DropTailQueue", "Mode", ns3::StringValue ("QUEUE_MODE_PACKETS"), "MaxPackets", ns3::UintegerValue(1));
 
 	ns3::PointToPointHelper leafLink;
 	leafLink.SetDeviceAttribute("DataRate", ns3::StringValue(accessBandwidth));
@@ -91,10 +91,8 @@ int main (int argc, char *argv[])
 	stack.Install(leftleaves);
 
 	// Install Traffic control helper
-	ns3::Config::SetDefault("ns3::PvPieQueueDisc::Mode", ns3::StringValue("QUEUE_DISC_MODE_BYTES"));
-	ns3::Config::SetDefault("ns3::PvPieQueueDisc::QueueLimit", ns3::UintegerValue(25000)); // 25 kb
-	ns3::Config::SetDefault("ns3::PvPieQueueDisc::QueueDelayReference", ns3::TimeValue(ns3::MilliSeconds (20))); // 40 ms
-	ns3::Config::SetDefault("ns3::PvPieQueueDisc::Tupdate", ns3::TimeValue(ns3::MilliSeconds (32))); // 32 ms
+	ns3::Config::SetDefault("ns3::PvPieQueueDisc::QueueDelayReference", ns3::TimeValue(ns3::MilliSeconds(40)));
+	ns3::Config::SetDefault("ns3::PvPieQueueDisc::Tupdate", ns3::TimeValue(ns3::MilliSeconds(100)));
 	ns3::Config::SetDefault("ns3::PvPieQueueDisc::DequeueThreshold", ns3::UintegerValue(10000)); // 10 Kb for packets between 1Kb and 1,5Kb
 	ns3::Config::SetDefault("ns3::PvPieQueueDisc::MeanPktSize", ns3::UintegerValue(packetSize));
 	ns3::Config::SetDefault("ns3::PvPieQueueDisc::A", ns3::DoubleValue(0.125));
