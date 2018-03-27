@@ -13,5 +13,5 @@ TODO:
 [x] PVPIE -> Check for header field (tag)
 [x] Marker rate calculation (EWMA)
 [x] Add delay class to tags for easier statistics
-[ ] PVPIE - eCDF function
+[x] PVPIE - eCDF function
 [ ] PIE to PVPIE modification

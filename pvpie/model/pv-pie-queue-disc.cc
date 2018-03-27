@@ -92,6 +92,7 @@ PvPieQueueDisc::PvPieQueueDisc () : QueueDisc ()
 	NS_LOG_FUNCTION (this);
 	m_uv = CreateObject<UniformRandomVariable> ();
 	m_rtrsEvent = Simulator::Schedule (m_sUpdate, &PvPieQueueDisc::CalculateP, this);
+	ecdf = eCDF();
 }
 
 PvPieQueueDisc::~PvPieQueueDisc ()
@@ -253,6 +254,9 @@ bool PvPieQueueDisc::DropEarly (Ptr<QueueDiscItem> item, uint32_t qSize, uint32_
 void PvPieQueueDisc::CalculateP()
 {
 	NS_LOG_FUNCTION (this);
+
+	ecdf.RemoveOldValues();
+
 	Time qDelay;
 	double p = 0.0;
 	bool missingInitFlag = false;
