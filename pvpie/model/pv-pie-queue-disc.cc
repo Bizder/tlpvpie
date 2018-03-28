@@ -19,30 +19,30 @@ NS_OBJECT_ENSURE_REGISTERED(PvPieQueueDisc);
 
 TypeId PvPieQueueDisc::GetTypeId(void)
 {
-static TypeId tid = TypeId ("ns3::PvPieQueueDisc")
-	.SetParent<QueueDisc> ()
-	.SetGroupName ("pvpie")
+static TypeId tid = TypeId("ns3::PvPieQueueDisc")
+	.SetParent<QueueDisc>()
+	.SetGroupName("pvpie")
 	.AddConstructor<PvPieQueueDisc> ()
 	.AddAttribute ("MeanPktSize",
 					"Average of packet size",
-					UintegerValue (64),
+					UintegerValue(64),
 					MakeUintegerAccessor (&PvPieQueueDisc::m_meanPktSize),
 					MakeUintegerChecker<uint32_t> ())
 	.AddAttribute ("A",
 					"Value of alpha",
-					DoubleValue (0.125),
-					MakeDoubleAccessor (&PvPieQueueDisc::m_a),
+					DoubleValue(0.125),
+					MakeDoubleAccessor(&PvPieQueueDisc::m_a),
 					MakeDoubleChecker<double> ())
 	.AddAttribute ("B",
 					"Value of beta",
-					DoubleValue (1.25),
-					MakeDoubleAccessor (&PvPieQueueDisc::m_b),
+					DoubleValue(1.25),
+					MakeDoubleAccessor(&PvPieQueueDisc::m_b),
 					MakeDoubleChecker<double> ())
 	.AddAttribute ("Tupdate",
 					"Time period to calculate drop probability",
-					TimeValue (Seconds (0.032)),
+					TimeValue(MilliSeconds(100)),
 					MakeTimeAccessor (&PvPieQueueDisc::m_tUpdate),
-					MakeTimeChecker ())
+					MakeTimeChecker())
 	.AddAttribute ("QueueLimit",
 					"Queue limit in bytes/packets",
 					UintegerValue(100000), // 100 kbytes
@@ -50,22 +50,22 @@ static TypeId tid = TypeId ("ns3::PvPieQueueDisc")
 					MakeUintegerChecker<uint32_t>())
 	.AddAttribute ("DequeueThreshold",
 					"Minimum queue size in bytes before dequeue rate is measured",
-					UintegerValue (10000),
+					UintegerValue(20000),
 					MakeUintegerAccessor (&PvPieQueueDisc::m_dqThreshold),
-					MakeUintegerChecker<uint32_t> ())
+					MakeUintegerChecker<uint32_t>())
 	.AddAttribute ("QueueDelayReference",
 					"Desired queue delay",
-					TimeValue (Seconds (0.02)),
-					MakeTimeAccessor (&PvPieQueueDisc::m_qDelayRef),
-					MakeTimeChecker ())
+					TimeValue(MilliSeconds(20)),
+					MakeTimeAccessor(&PvPieQueueDisc::m_qDelayRef),
+					MakeTimeChecker())
 	.AddAttribute ("MaxBurstAllowance",
 					"Current max burst allowance in seconds before random drop",
-					TimeValue (Seconds (0.1)),
-					MakeTimeAccessor (&PvPieQueueDisc::m_maxBurst),
-					MakeTimeChecker ())
+					TimeValue(MilliSeconds(100)),
+					MakeTimeAccessor(&PvPieQueueDisc::m_maxBurst),
+					MakeTimeChecker())
 	.AddTraceSource("QueueingDelay",
 					"Queueing Delay",
-					MakeTraceSourceAccessor (&PvPieQueueDisc::m_qDelay),
+					MakeTraceSourceAccessor(&PvPieQueueDisc::m_qDelay),
 					"ns3::Time::TracedValueCallback")
 	;
 
@@ -111,37 +111,35 @@ Time PvPieQueueDisc::GetQueueDelay(void)
 
 void PvPieQueueDisc::InitializeParams(void)
 {
-	// Initially queue is empty so variables are initialize to zero except m_dqCount
 	m_inMeasurement = false;
-	m_dqCount = -1;
+	m_dqCount = 0;
 	m_thresholdValue = 0;
 	m_avgDqRate = 0.0;
-	m_dqStart = 0;
+	m_start = 0;
 	m_burstState = NO_BURST;
-	m_qDelayOld = Time(Seconds(0));
+	m_qDelayOld = Time(MilliSeconds(0));
 }
 
 bool PvPieQueueDisc::DoEnqueue(Ptr<QueueDiscItem> item)
 {
 	NS_LOG_FUNCTION (this << item);
 
-	// Upon packet arrival randomly drop a packet with a probability p.
 	uint32_t nQueued = GetQueueSize();
 
 	PacketValueTag tag;
 	item->GetPacket()->PeekPacketTag(tag);
 	m_ecdf.AddValue(Simulator::Now(), tag.GetPacketValue());
 
-	if (nQueued + item->GetSize () > m_queueLimit)
+	if (nQueued + item->GetSize() > m_queueLimit)
 	{
 		// Drops due to queue limit: reactive
-		DropBeforeEnqueue (item, FORCED_DROP);
+		DropBeforeEnqueue(item, FORCED_DROP);
 		return false;
 	}
-	else if (DropEarly (item, nQueued, tag.GetPacketValue()))
+	else if (DropEarly(item, nQueued, tag.GetPacketValue()))
 	{
 		// Early probability drop: proactive
-		DropBeforeEnqueue (item, UNFORCED_DROP);
+		DropBeforeEnqueue(item, UNFORCED_DROP);
 		return false;
 	}
 
@@ -162,29 +160,10 @@ bool PvPieQueueDisc::DropEarly(Ptr<QueueDiscItem> item, uint32_t qSize, uint32_t
 	NS_LOG_FUNCTION (this << item << qSize);
 	if (m_burstAllowance.GetSeconds() > 0)
 	{
-		// If there is still burst_allowance left, skip random early drop.
 		return false;
 	}
 
-	if (m_burstState == NO_BURST)
-	{
-		m_burstState = IN_BURST_PROTECTING;
-		m_burstAllowance = m_maxBurst;
-	}
-
-	uint32_t packetSize = item->GetSize();
-
-	// if ((m_qDelayOld.GetSeconds() < (0.5 * m_qDelayRef.GetSeconds())) && (m_dropProb < 0.2))
-	// {
-	// 	return false;
-	// }
-	// else if (qSize <= 2 * m_meanPktSize)
-	if (qSize <= 2 * m_meanPktSize)
-	{
-		return false;
-	}
-
-	return packet_value >= m_thresholdValue;
+	return packet_value < m_thresholdValue;
 }
 
 void PvPieQueueDisc::CalculateP(void)
@@ -193,20 +172,15 @@ void PvPieQueueDisc::CalculateP(void)
 
 	m_ecdf.RemoveOldValues();
 
-	Time qDelay;
 	double p = 0.0;
-	bool missingInitFlag = false;
 	if (m_avgDqRate > 0)
 	{
-		qDelay = Time (Seconds (GetInternalQueue (0)->GetNBytes () / m_avgDqRate));
+		m_qDelay = Time(Seconds(GetInternalQueue(0)->GetNBytes() / m_avgDqRate));
 	}
 	else
 	{
-		qDelay = Time (Seconds (0));
-		missingInitFlag = true;
+		m_qDelay = Time(Seconds(0));
 	}
-
-	m_qDelay = qDelay;
 
 	if (m_burstAllowance.GetSeconds() > 0)
 	{
@@ -214,153 +188,66 @@ void PvPieQueueDisc::CalculateP(void)
 	}
 	else
 	{
-		p = m_a * (qDelay.GetSeconds () - m_qDelayRef.GetSeconds ()) + m_b * (qDelay.GetSeconds () - m_qDelayOld.GetSeconds ());
-		if (m_dropProb < 0.001)
-		{
-			p /= 32;
-		}
-		else if (m_dropProb < 0.01)
+		p = m_a * (m_qDelay.GetSeconds() - m_qDelayRef.GetSeconds()) + m_b * (m_qDelay.GetSeconds() - m_qDelayOld.GetSeconds());
+		if (p < 0.01)
 		{
 			p /= 8;
 		}
-		else if (m_dropProb < 0.1)
+		else if (p < 0.1)
 		{
 			p /= 2;
 		}
-		else if (m_dropProb < 1)
-		{
-			p /= 0.5;
-		}
-		else if (m_dropProb < 10)
-		{
-			p /= 0.125;
-		}
-		else
-		{
-			p /= 0.03125;
-		}
-		if ((m_dropProb >= 0.1) && (p > 0.02))
-		{
-			p = 0.02;
-		}
 	}
 
-	p += m_dropProb;
+	m_dropProb += p;
+	m_dropProb = (m_dropProb > 0) ? m_dropProb : 0;
 
-	// For non-linear drop in prob
-
-	if (qDelay.GetSeconds () == 0 && m_qDelayOld.GetSeconds () == 0)
-	{
-		p *= 0.98;
-	}
-	else if (qDelay.GetSeconds () > 0.2)
-	{
-		p += 0.02;
-	}
-
-	m_dropProb = (p > 0) ? p : 0;
-
-	m_thresholdValue = ecdf.GetThresholdValue(p);
-
-	if (m_burstAllowance < m_tUpdate)
-	{
-		m_burstAllowance =  Time (Seconds (0));
-	}
-	else
-	{
-		m_burstAllowance -= m_tUpdate;
-	}
-
-	uint32_t burstResetLimit = BURST_RESET_TIMEOUT / m_tUpdate.GetSeconds ();
-	if ( (qDelay.GetSeconds () < 0.5 * m_qDelayRef.GetSeconds ()) && (m_qDelayOld.GetSeconds () < (0.5 * m_qDelayRef.GetSeconds ())) && (m_dropProb == 0) && !missingInitFlag )
-	{
-		m_dqCount = -1;
-		m_avgDqRate = 0.0;
-	}
-	if ( (qDelay.GetSeconds () < 0.5 * m_qDelayRef.GetSeconds ()) && (m_qDelayOld.GetSeconds () < (0.5 * m_qDelayRef.GetSeconds ())) && (m_dropProb == 0) && (m_burstAllowance.GetSeconds () == 0))
-	{
-		if (m_burstState == IN_BURST_PROTECTING)
-		{
-			m_burstState = IN_BURST;
-			m_burstReset = 0;
-		}
-		else if (m_burstState == IN_BURST)
-		{
-			m_burstReset++;
-			if (m_burstReset > burstResetLimit)
-			{
-				m_burstReset = 0;
-				m_burstState = NO_BURST;
-			}
-		}
-	}
-	else if (m_burstState == IN_BURST)
-	{
-		m_burstReset = 0;
-	}
+	m_thresholdValue = ecdf.GetThresholdValue(m_dropProb);
 
 	m_qDelayOld = qDelay;
-	m_rtrsEvent = Simulator::Schedule (m_tUpdate, &PvPieQueueDisc::CalculateP, this);
+	m_rtrsEvent = Simulator::Schedule(m_tUpdate, &PvPieQueueDisc::CalculateP, this);
 }
 
 Ptr<QueueDiscItem> PvPieQueueDisc::DoDequeue(void)
 {
 	NS_LOG_FUNCTION (this);
 
-	if (GetInternalQueue (0)->IsEmpty ())
+	if ( GetInternalQueue (0)->IsEmpty() )
 	{
 		NS_LOG_LOGIC ("Queue empty");
 		return 0;
 	}
 
-	Ptr<QueueDiscItem> item = GetInternalQueue (0)->Dequeue ();
+	Ptr<QueueDiscItem> item = GetInternalQueue(0)->Dequeue();
 	double now = Simulator::Now().GetSeconds();
-	uint32_t pktSize = item->GetSize ();
+	uint32_t dqPktSize = item->GetSize();
+	double e = 0.5;
 
-	// if not in a measurement cycle and the queue has built up to dq_threshold,
-	// start the measurement cycle
-
-	if ( (GetInternalQueue (0)->GetNBytes () >= m_dqThreshold) && (!m_inMeasurement) )
+	if ( (GetInternalQueue(0)->GetNBytes() >= m_dqThreshold) && (!m_inMeasurement) )
 	{
-		m_dqStart = now;
-		m_dqCount = 0;
 		m_inMeasurement = true;
 	}
 
 	if (m_inMeasurement)
 	{
-		m_dqCount += pktSize;
+		m_dqCount += dqPktSize;
 
-		// done with a measurement cycle
-		if (m_dqCount >= m_dqThreshold)
+		if (m_dqCount > m_dqThreshold)
 		{
+			double dqInt = now - m_start;
+			double dqRate = m_dqCount / dqInt;
+			m_avgDqRate = (1-e)*m_avgDqRate + e*dqRate;
+			m_dqCount = 0;
+			m_start = now;
 
-			double tmp = now - m_dqStart;
+			m_burstAllowance -= dqInt;
 
-			if (tmp > 0)
+			if (m_dropProb == 0 && m_qDelay < m_qDelayRef / 2 && m_qDelayOld < m_qDelayRef / 2)
 			{
-				if (m_avgDqRate == 0)
-				{
-					m_avgDqRate = m_dqCount / tmp;
-				}
-				else
-				{
-					m_avgDqRate = (0.5 * m_avgDqRate) + (0.5 * (m_dqCount / tmp));
-				}
+				m_burstAllowance = m_maxBurst;
 			}
 
-			// restart a measurement cycle if there is enough data
-			if (GetInternalQueue (0)->GetNBytes () > m_dqThreshold)
-			{
-				m_dqStart = now;
-				m_dqCount = 0;
-				m_inMeasurement = true;
-			}
-			else
-			{
-				m_dqCount = 0;
-				m_inMeasurement = false;
-			}
+			m_inMeasurement = false;
 		}
 	}
 

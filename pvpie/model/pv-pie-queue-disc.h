@@ -67,7 +67,8 @@ class PvPieQueueDisc : public QueueDisc {
 		uint32_t m_dqThreshold;                       //!< Minimum queue size in bytes before dequeue rate is measured
 
 		// ** Variables maintained by PIE
-		TracedValue<double> m_thresholdValue;         //!< Filter value - V
+		TracedValue<double> m_thresholdValue;         //!< threshold value
+		TracedValue<double> m_dropProb;               //!< drop probability
 		Time m_qDelayOld;                             //!< Old value of queue delay
 		TracedValue<Time> m_qDelay;                   //!< Current value of queue delay
 		Time m_burstAllowance;                        //!< Current max burst value in seconds that is allowed before random drops kick in
@@ -75,7 +76,7 @@ class PvPieQueueDisc : public QueueDisc {
 		BurstStateT m_burstState;                     //!< Used to determine the current state of burst
 		bool m_inMeasurement;                         //!< Indicates whether we are in a measurement cycle
 		double m_avgDqRate;                           //!< Time averaged dequeue rate
-		double m_dqStart;                             //!< Start timestamp of current measurement cycle
+		double m_start;                               //!< Start timestamp of current measurement cycle
 		uint32_t m_dqCount;                           //!< Number of bytes departed since current measurement cycle starts
 		EventId m_rtrsEvent;                          //!< Event used to decide the decision of interval of drop probability calculation
 		eCDF m_ecdf;                                  //!< eCDF function used to determine packet value
