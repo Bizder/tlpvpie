@@ -14,11 +14,11 @@
 
 namespace ns3 {
 
-class PvPieQueueDisc : public QueueDisc {
+class DoublePieQueueDisc : public QueueDisc {
 	public:
 		static TypeId GetTypeId(void);
-		PvPieQueueDisc(void);
-		virtual ~PvPieQueueDisc(void);
+		DoublePieQueueDisc(void);
+		virtual ~DoublePieQueueDisc(void);
 
 		enum BurstStateT
 		{
