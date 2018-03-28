@@ -75,7 +75,7 @@ static TypeId tid = TypeId("ns3::DoublePieQueueDisc")
 DoublePieQueueDisc::DoublePieQueueDisc(void) : QueueDisc ()
 {
 	NS_LOG_FUNCTION (this);
-	m_rtrsEvent = Simulator::Schedule(TimeValue(Seconds(0)), &DoublePieQueueDisc::CalculateP, this);
+	m_rtrsEvent = Simulator::Schedule(Time(Seconds(0)), &DoublePieQueueDisc::CalculateP, this);
 	m_ecdf = eCDF();
 }
 
@@ -173,13 +173,15 @@ void DoublePieQueueDisc::CalculateP(void)
 	m_ecdf.RemoveOldValues();
 
 	double p = 0.0;
+	Time qDelay;
+
 	if (m_avgDqRate > 0)
 	{
-		m_qDelay = Time(Seconds(GetInternalQueue(0)->GetNBytes() / m_avgDqRate));
+		qDelay = Time(Seconds(GetInternalQueue(0)->GetNBytes() / m_avgDqRate));
 	}
 	else
 	{
-		m_qDelay = Time(Seconds(0));
+		qDelay = Time(Seconds(0));
 	}
 
 	if (m_burstAllowance.GetSeconds() > 0)
@@ -188,7 +190,7 @@ void DoublePieQueueDisc::CalculateP(void)
 	}
 	else
 	{
-		p = m_a * (m_qDelay.GetSeconds() - m_qDelayRef.GetSeconds()) + m_b * (m_qDelay.GetSeconds() - m_qDelayOld.GetSeconds());
+		p = m_a * (qDelay.GetSeconds() - m_qDelayRef.GetSeconds()) + m_b * (qDelay.GetSeconds() - m_qDelayOld.GetSeconds());
 		if (p < 0.01)
 		{
 			p /= 8;
@@ -199,12 +201,13 @@ void DoublePieQueueDisc::CalculateP(void)
 		}
 	}
 
-	m_dropProb += p;
-	m_dropProb = (m_dropProb > 0) ? m_dropProb : 0;
+	p += m_dropProb;
+	m_dropProb = (p > 0) ? p : 0;
 
-	m_thresholdValue = ecdf.GetThresholdValue(m_dropProb);
+	m_thresholdValue = m_ecdf.GetThresholdValue(m_dropProb);
 
-	m_qDelayOld = qDelay;
+	m_qDelay = qDelay;
+	m_qDelayOld = m_qDelay;
 	m_rtrsEvent = Simulator::Schedule(m_tUpdate, &DoublePieQueueDisc::CalculateP, this);
 }
 
@@ -240,7 +243,7 @@ Ptr<QueueDiscItem> DoublePieQueueDisc::DoDequeue(void)
 			m_dqCount = 0;
 			m_start = now;
 
-			m_burstAllowance -= dqInt;
+			m_burstAllowance = m_burstAllowance - Time(Seconds(dqInt));
 
 			if (m_dropProb == 0 && m_qDelay < m_qDelayRef / 2 && m_qDelayOld < m_qDelayRef / 2)
 			{
