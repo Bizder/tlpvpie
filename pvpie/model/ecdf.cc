@@ -35,8 +35,10 @@ eCDF::eCDF()
 
 uint32_t eCDF::GetThresholdValue(double pdrop)
 {
-  std::vector<uint32_t> sorted_values;
+  if ( values.size() == 0 )
+    return 0;
 
+  std::vector<uint32_t> sorted_values;
   for ( uint32_t i = 0; i < values.size() ; ++i )
   {
     sorted_values.push_back(values[i].packet_value);

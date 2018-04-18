@@ -44,13 +44,13 @@ int main (int argc, char *argv[])
 	unsigned int packetSize = 1000;
 
 	ns3::Config::SetDefault ("ns3::OnOffApplication::PacketSize", ns3::UintegerValue(packetSize));
-	ns3::Config::SetDefault ("ns3::OnOffApplication::DataRate", ns3::StringValue("3Mbps"));
+	ns3::Config::SetDefault ("ns3::OnOffApplication::DataRate", ns3::StringValue("5Mbps"));
 
 	std::string accessBandwidth = "10Mbps";
 	std::string accessDelay = "20ms";
 
 	std::string bottleneckBandwidth ="1Mbps";
-	std::string bottleneckDelay = "2ms";
+	std::string bottleneckDelay = "20ms";
 	ns3::Time::SetResolution (ns3::Time::NS);
 
 	// Create link helpers

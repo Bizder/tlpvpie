@@ -22,7 +22,7 @@ TypeId PvPieQueueDisc::GetTypeId(void)
 static TypeId tid = TypeId("ns3::PvPieQueueDisc")
 	.SetParent<QueueDisc>()
 	.SetGroupName("pvpie")
-	.AddConstructor<PvPieQueueDisc> ()
+	.AddConstructor<PvPieQueueDisc>()
 	.AddAttribute ("MeanPktSize",
 					"Average of packet size",
 					UintegerValue(64),
@@ -45,12 +45,12 @@ static TypeId tid = TypeId("ns3::PvPieQueueDisc")
 					MakeTimeChecker())
 	.AddAttribute ("QueueLimit",
 					"Queue limit in bytes/packets",
-					UintegerValue(100000), // 100 kbytes
+					UintegerValue(25000), // 100 kbytes
 					MakeUintegerAccessor(&PvPieQueueDisc::SetQueueLimit),
 					MakeUintegerChecker<uint32_t>())
 	.AddAttribute ("DequeueThreshold",
 					"Minimum queue size in bytes before dequeue rate is measured",
-					UintegerValue(20000),
+					UintegerValue(10000),
 					MakeUintegerAccessor (&PvPieQueueDisc::m_dqThreshold),
 					MakeUintegerChecker<uint32_t>())
 	.AddAttribute ("QueueDelayReference",
@@ -67,6 +67,10 @@ static TypeId tid = TypeId("ns3::PvPieQueueDisc")
 					"Queueing Delay",
 					MakeTraceSourceAccessor(&PvPieQueueDisc::m_qDelay),
 					"ns3::Time::TracedValueCallback")
+	.AddTraceSource("Probability",
+					"Probability of packet droping",
+					MakeTraceSourceAccessor (&PvPieQueueDisc::m_dropProb),
+					"ns3::TracedValueCallback::Double")
 	;
 
 	return tid;
@@ -124,7 +128,7 @@ bool PvPieQueueDisc::DoEnqueue(Ptr<QueueDiscItem> item)
 {
 	NS_LOG_FUNCTION (this << item);
 
-	uint32_t nQueued = GetQueueSize();
+	uint32_t nQueued = GetInternalQueue(0)->GetNBytes();
 
 	PacketValueTag tag;
 	item->GetPacket()->PeekPacketTag(tag);
@@ -132,13 +136,11 @@ bool PvPieQueueDisc::DoEnqueue(Ptr<QueueDiscItem> item)
 
 	if (nQueued + item->GetSize() > m_queueLimit)
 	{
-		// Drops due to queue limit: reactive
 		DropBeforeEnqueue(item, FORCED_DROP);
 		return false;
 	}
 	else if (DropEarly(item, nQueued, tag.GetPacketValue()))
 	{
-		// Early probability drop: proactive
 		DropBeforeEnqueue(item, UNFORCED_DROP);
 		return false;
 	}
@@ -202,8 +204,8 @@ void PvPieQueueDisc::CalculateP(void)
 	}
 
 	p += m_dropProb;
+	std::cerr << qDelay << std::endl;
 	m_dropProb = (p > 0) ? p : 0;
-
 	m_thresholdValue = m_ecdf.GetThresholdValue(m_dropProb);
 
 	m_qDelay = qDelay;
@@ -226,8 +228,11 @@ Ptr<QueueDiscItem> PvPieQueueDisc::DoDequeue(void)
 	uint32_t dqPktSize = item->GetSize();
 	double e = 0.5;
 
+	std::cerr << GetInternalQueue(0)->GetNBytes() << std::endl;
 	if ( (GetInternalQueue(0)->GetNBytes() >= m_dqThreshold) && (!m_inMeasurement) )
 	{
+		std::cerr << "Hallo";
+		m_start = now;
 		m_inMeasurement = true;
 	}
 
