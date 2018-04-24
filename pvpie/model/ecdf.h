@@ -27,15 +27,15 @@ class eCDF
   public:
     uint32_t GetThresholdValue(double);
     void AddValue(Time, uint32_t);
-    void RemoveOldValues(Time currentTime);
+    void RemoveOldValues();
 
-    void SetTimeDelta(Time);
-    Time GetTimeDelta(void);
+    void SetTimeDelta(double);
+    double GetTimeDelta(void);
 
 
   private:
     std::vector<PacketValueRecord> values;
-    Time timedelta;
+    double timedelta;
 
 };
 

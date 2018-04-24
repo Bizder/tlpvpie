@@ -20,7 +20,7 @@ void eCDF::RemoveOldValues()
   double now = Simulator::Now().GetSeconds();
 
   int threshold_index = 0;
-  for (int i = 0; i < values.size() ; ++i ) {
+  for (uint16_t i = 0; i < values.size() ; ++i ) {
     if ( now - timedelta > values[i].receive_time)
     {
       threshold_index = i;
@@ -35,12 +35,12 @@ void eCDF::AddValue(Time time, uint32_t packet_value)
   values.push_back(PacketValueRecord(time, packet_value));
 }
 
-void SetTimeDelta(Time timedelta)
+void eCDF::SetTimeDelta(double timedelta)
 {
-  this.timedelta = timedelta;
+  this->timedelta = timedelta;
 }
 
-Time GetTimeDelta(void)
+double eCDF::GetTimeDelta(void)
 {
   return timedelta;
 }
