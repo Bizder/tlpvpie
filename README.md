@@ -13,5 +13,12 @@ TODO:
 [x] PVPIE -> Check for header field (tag)
 [x] Marker rate calculation (EWMA)
 [x] Add delay class to tags for easier statistics
-[ ] PVPIE - eCDF function
-[ ] PIE to PVPIE modification
+[x] PVPIE - eCDF function
+[x] PIE to PVPIE modification
+[ ] python script to run from config files
+[ ] trace different delay class latencies (delay class + current delay)
+[ ] add inner PIE controller to replace eCDF
+[ ]
+[ ]
+[ ]
+

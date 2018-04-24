@@ -22,16 +22,20 @@ struct PacketValueRecord {
 
 };
 
-class eCDF
+class eCDF : public Object
 {
   public:
+    static TypeId GetTypeId (void);
+    virtual TypeId GetInstanceTypeId (void) const;
+
+    eCDF();
+
     uint32_t GetThresholdValue(double);
     void AddValue(Time, uint32_t);
     void RemoveOldValues();
 
     void SetTimeDelta(double);
     double GetTimeDelta(void);
-
 
   private:
     std::vector<PacketValueRecord> values;
