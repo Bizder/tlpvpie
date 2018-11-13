@@ -1,5 +1,8 @@
+SET PVPIE_REPO_PATH=c:/Users/tokodi/OTHER/pvpie
+
 docker run -d -it ^
-	--mount type=bind,source=d:/Projects/PVPIE-ns3/pvpie/scripts,target=/home/ns-allinone-3.27/ns-3.27/scratch/ ^
-	--mount type=bind,source=d:/Projects/PVPIE-ns3/pvpie/pvpie,target=/home/ns-allinone-3.27/ns-3.27/src/pvpie ^
-	--mount type=bind,source=d:/Projects/PVPIE-ns3/output/,target=/home/ns-allinone-3.27/ns-3.27/output/ ^
-	23571113/nsc /bin/bash
+	--mount type=bind,source=c:/Users/tokodi/OTHER/ns3,target=/ns3/ ^
+	--mount type=bind,source=%PVPIE_REPO_PATH%/scripts,target=/ns3/ns-3.29/scratch/ ^
+	--mount type=bind,source=%PVPIE_REPO_PATH%/pvpie,target=/ns3/ns-3.29/src/pvpie/ ^
+	--mount type=bind,source=%PVPIE_REPO_PATH%/output,target=/ns3/ns-3.29/output/ ^
+	bizder/ns3 /bin/bash

@@ -1,4 +1,4 @@
-/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+ /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
 /*
 Packet value expressed as value per bit.
@@ -42,9 +42,17 @@ static TypeId tid = TypeId ("ns3::PacketMarkerQueueDisc")
 	.AddConstructor<PacketMarkerQueueDisc>()
 	.AddAttribute ("A",
 					"Value of alpha in EWMA calculation",
-					DoubleValue (0.25),
-					MakeDoubleAccessor (&PacketMarkerQueueDisc::m_a),
+					DoubleValue (0.1),
+					MakeDoubleAccessor(&PacketMarkerQueueDisc::m_a),
 					MakeDoubleChecker<double> ())
+	.AddTraceSource("PacketValue",
+					"Probability of packet droping",
+					MakeTraceSourceAccessor (&PacketMarkerQueueDisc::m_lastpv),
+					"ns3::TracedValueCallback::UInteger")
+	.AddTraceSource("TransferRate",
+					"Transfer rate of application calculated by EWMA",
+					MakeTraceSourceAccessor (&PacketMarkerQueueDisc::m_transferRate),
+					"ns3::TracedValueCallback::UInteger")
 	;
 
 	return tid;
@@ -89,7 +97,9 @@ bool PacketMarkerQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 	NS_LOG_FUNCTION (this << item);
 
 	double u = m_uv->GetValue();
-	uint32_t packet_value = throughputValueFunction(m_transferRate * u);
+
+	uint32_t packet_value = throughputValueFunction(m_transferRate);
+	packet_value += (500000000 - packet_value) * u;
 
 	PacketValueTag tag;
 	tag.SetPacketValue(packet_value);
@@ -104,6 +114,8 @@ bool PacketMarkerQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 
 	m_transferRate = m_a * current_rate + ( 1 - m_a ) * m_transferRate;
 	m_lastSend = now;
+
+	m_lastpv = packet_value;
 
 	NS_LOG_LOGIC ("\t bytesInQueue  " << GetInternalQueue (0)->GetNBytes ());
 	NS_LOG_LOGIC ("\t packetsInQueue  " << GetInternalQueue (0)->GetNPackets ());
@@ -159,12 +171,12 @@ bool PacketMarkerQueueDisc::CheckConfig (void)
 	}
 
 	if (GetNInternalQueues () == 0)
-	{
-		// create a DropTail queue
-		Ptr<InternalQueue> queue = CreateObjectWithAttributes<DropTailQueue<QueueDiscItem> > ("Mode", EnumValue(QueueBase::QueueMode::QUEUE_MODE_PACKETS));
-		queue->SetMaxPackets (5);
-		AddInternalQueue (queue);
-	}
+    {
+      // create a DropTail queue
+      AddInternalQueue (CreateObjectWithAttributes<DropTailQueue<QueueDiscItem> >
+                          ("MaxSize", QueueSizeValue (QueueSize ("5p"))));
+
+    }
 
 	if (GetNInternalQueues () != 1)
 	{
@@ -185,6 +197,8 @@ uint8_t PacketMarkerQueueDisc::getPriority()
 	return 0;
 }
 
+/******************************** GOLD MARKER ********************************/
+
 NS_OBJECT_ENSURE_REGISTERED(GoldPacketMarkerQueueDisc);
 
 TypeId GoldPacketMarkerQueueDisc::GetTypeId (void)
@@ -198,10 +212,13 @@ static TypeId tid = TypeId ("ns3::GoldPacketMarkerQueueDisc")
 	return tid;
 }
 
-uint32_t GoldPacketMarkerQueueDisc::throughputValueFunction(uint32_t rate_kbps)
+// x is bit per second
+uint32_t GoldPacketMarkerQueueDisc::throughputValueFunction(uint32_t x)
 {
-	double y = 212500000.0 / 3123.0 - (2125.0 * rate_kbps ) / 3123.0;
-	return y > 0 ? (uint32_t)y : 0;
+	uint32_t y = 500000000 - x * 5;
+	//uint32_t y = 100000 - x;
+	// double y = 212500000.0 / 3123.0 - (2125.0 * rate_kbps ) / 3123.0;
+	return y > 0 ? y : 0;
 }
 
 uint8_t GoldPacketMarkerQueueDisc::getPriority()
@@ -209,6 +226,7 @@ uint8_t GoldPacketMarkerQueueDisc::getPriority()
 	return 1;
 }
 
+/******************************** SILVER MARKER ********************************/
 
 NS_OBJECT_ENSURE_REGISTERED(SilverPacketMarkerQueueDisc);
 
@@ -223,15 +241,45 @@ static TypeId tid = TypeId ("ns3::SilverPacketMarkerQueueDisc")
 	return tid;
 }
 
-uint32_t SilverPacketMarkerQueueDisc::throughputValueFunction(uint32_t rate_kbps)
+uint32_t SilverPacketMarkerQueueDisc::throughputValueFunction(uint32_t x)
 {
-	double y = 212500000.0 / 3123.0 - ( 4250.0 * rate_kbps ) / 3123.0;
-	return y > 0 ? (uint32_t)y : 0;
+	uint32_t y = 500000000 - x * 10;
+	// uint32_t y = 100000 - x * 1.5;
+	// double y = 212500000.0 / 3123.0 - ( 4250.0 * rate_kbps ) / 3123.0;
+	return y > 0 ? y : 0;
 }
 
 uint8_t SilverPacketMarkerQueueDisc::getPriority()
 {
 	return 2;
+}
+
+/******************************** BACKGROUND MARKER ********************************/
+
+NS_OBJECT_ENSURE_REGISTERED(BackgroundPacketMarkerQueueDisc);
+
+TypeId BackgroundPacketMarkerQueueDisc::GetTypeId (void)
+{
+static TypeId tid = TypeId ("ns3::BackgroundPacketMarkerQueueDisc")
+	.SetParent<PacketMarkerQueueDisc>()
+	.SetGroupName ("pvpie")
+	.AddConstructor<BackgroundPacketMarkerQueueDisc>()
+	;
+
+	return tid;
+}
+
+uint32_t BackgroundPacketMarkerQueueDisc::throughputValueFunction(uint32_t x)
+{
+	uint32_t y = 500000000 - x * 100;
+	// uint32_t y = 100000 - x * 1.5 * 5;
+	// double y = 212500000.0 / 3123.0 - ( 4250.0 * rate_kbps ) / 3123.0;
+	return y > 0 ? y : 0;
+}
+
+uint8_t BackgroundPacketMarkerQueueDisc::getPriority()
+{
+	return 3;
 }
 
 } /* namespace ns3 */

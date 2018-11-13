@@ -5,7 +5,6 @@
 #include "ns3/queue-disc.h"
 #include "ns3/random-variable-stream.h"
 #include "ns3/timer.h"
-#include "token-bucket.h"
 
 namespace ns3 {
 
@@ -36,13 +35,11 @@ class PacketMarkerQueueDisc : public QueueDisc {
 		double m_a;                                   //!< Value of alpha in EWMA calculation
 
 		// ** Variables maintained by Marker
-		uint32_t m_transferRate;                      //!< Transfer Rate calculated by EWMA (exponentioally waited moving average)
+		TracedValue<uint32_t> m_transferRate;         //!< Transfer Rate calculated by EWMA (exponentioally waited moving average)
 		Time m_lastSend;                              //!< Last time a packet was enqueued
 		Ptr<UniformRandomVariable> m_uv;              //!< Rng stream
 
-
-		// int32_t m_granularity;                        //!< Granularity of buckets
-		// std::vector<TokenBucket> m_tokenBuckets;      //!< Token bucket vector
+		TracedValue<uint32_t> m_lastpv;        //!< value of last PV
 };
 
 class GoldPacketMarkerQueueDisc : public PacketMarkerQueueDisc {
@@ -65,7 +62,17 @@ class SilverPacketMarkerQueueDisc : public PacketMarkerQueueDisc {
 	private:
 		uint32_t throughputValueFunction(uint32_t);
 		uint8_t getPriority();
+};
 
+class BackgroundPacketMarkerQueueDisc : public PacketMarkerQueueDisc {
+	public:
+		static TypeId GetTypeId (void);
+		BackgroundPacketMarkerQueueDisc() : PacketMarkerQueueDisc() {};
+		virtual ~BackgroundPacketMarkerQueueDisc() {};
+
+	private:
+		uint32_t throughputValueFunction(uint32_t);
+		uint8_t getPriority();
 };
 
 
