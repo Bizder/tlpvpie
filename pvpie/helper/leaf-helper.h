@@ -4,7 +4,7 @@
 
 namespace ns3 {
 
-class Leafhelper {
+class LeafHelper {
 
 public:
     LeafHelper(AQMTopologyHelper::DelayClass delayClass,

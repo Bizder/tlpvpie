@@ -15,7 +15,7 @@ def build(bld):
         'model/packet-marker-queue-disc.cc',
         'model/packet-value-tag.cc',
         'helper/leaf-helper.cc',
-        'helper/aqm-topology-helper.cc',
+        'helper/aqm-topology-helper.cc'
     ]
 
     module_test = bld.create_ns3_module_test_library('pvpie')

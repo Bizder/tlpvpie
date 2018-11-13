@@ -15,17 +15,17 @@ LeafHelper::LeafHelper(AQMTopologyHelper::DelayClass delayClass,
     m_stopTime = stopTime;
 }
 
-LeafHelper::GetDelayClass()
+AQMTopologyHelper::DelayClass LeafHelper::GetDelayClass()
 {
     return m_delayClass;
 }
 
-LeafHelper::GetStartTime()
+Time LeafHelper::GetStartTime()
 {
     return m_startTime;
 }
 
-LeafHelper::GetStopTime()
+Time LeafHelper::GetStopTime()
 {
     return m_stopTime;
 }

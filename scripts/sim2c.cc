@@ -190,14 +190,12 @@ int main (int argc, char *argv[])
     topology.InstallStack();
     topology.InstallPvPieTrafficControl();
 
-    toplogy.InstallTrafficControl(1, AQMTopologyHelper::DelayClass::Gold);
-    InstallApplication(i, startTime, stopTime);
-    topology.ConfigureLeaf(1, AQMTopologyHelper::DelayClass::Gold, Seconds(0), Seconds(150));
-
+    topology.InstallTrafficControl(1, AQMTopologyHelper::DelayClass::Gold);
 
     topology.AssignIpv4Addresses(ns3::Ipv4AddressHelper("99.9.1.0", "255.255.255.0"),
                                  ns3::Ipv4AddressHelper("10.1.1.0", "255.255.255.0"));
     topology.InstallSinkApplication();
+    topology.InstallApplication(1, Seconds(0), Seconds(150));
 
 
     ns3::Ipv4GlobalRoutingHelper::PopulateRoutingTables();
