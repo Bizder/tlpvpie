@@ -12,8 +12,7 @@ NS_LOG_COMPONENT_DEFINE ("AQMTopologyHelper");
 AQMTopologyHelper::AQMTopologyHelper(std::string bottleneckBandwidth,
                                    std::string bottleneckDelay,
                                    std::string accessBandwidth,
-                                   std::string accessDelay,
-                                   uint32_t nLeftLeaf)
+                                   std::string accessDelay)
 {
     PointToPointHelper bottleneckLink;
     bottleneckLink.SetDeviceAttribute("DataRate", StringValue(bottleneckBandwidth));
@@ -24,33 +23,16 @@ AQMTopologyHelper::AQMTopologyHelper(std::string bottleneckBandwidth,
     leafLink.SetDeviceAttribute("DataRate", StringValue(accessBandwidth));
     leafLink.SetChannelAttribute("Delay", StringValue(accessDelay));
 
-    Initialize(bottleneckLink, nLeftLeaf, leafLink);
+    m_bottleneckHelper = bottleneckLink;
+    m_leftHelper = leafLink;
 }
 
 AQMTopologyHelper::AQMTopologyHelper(PointToPointHelper bottleneckHelper,
-                                   uint32_t nLeftLeaf,
                                    PointToPointHelper leftHelper)
 {
-  Initialize(bottleneckHelper, nLeftLeaf, leftHelper);
+  m_bottleneckHelper = bottleneckHelper;
+  m_leftHelper = leftHelper;
 }
-
-void AQMTopologyHelper::Initialize(PointToPointHelper bottleneckHelper,
-                                   uint32_t nLeftLeaf,
-                                   PointToPointHelper leftHelper)
-{
-  m_routers.Create(2);
-  m_leftLeaf.Create (nLeftLeaf);
-
-  m_routerDevices = bottleneckHelper.Install (m_routers);
-  for (uint32_t i = 0; i < nLeftLeaf; ++i)
-    {
-      NetDeviceContainer c = leftHelper.Install (m_routers.Get (0),
-                                                 m_leftLeaf.Get (i));
-      m_leftRouterDevices.Add (c.Get (0));
-      m_leftLeafDevices.Add (c.Get (1));
-    }
-}
-
 
 AQMTopologyHelper::~AQMTopologyHelper()
 {
@@ -73,16 +55,33 @@ Ptr<Node> AQMTopologyHelper::GetRight () const
 
 uint32_t  AQMTopologyHelper::LeftCount () const
 {
-  return m_leftLeaf.GetN ();
+  return m_leafConfigurations.size();
 }
 
-void AQMTopologyHelper::InstallStack ()
+void AQMTopologyHelper::Initialize()
+{
+  m_initialized = true;
+
+  m_routers.Create(2);
+  m_leftLeaf.Create (LeftCount());
+
+  m_routerDevices = m_bottleneckHelper.Install (m_routers);
+  for (uint32_t i = 0; i < LeftCount(); ++i)
+    {
+      NetDeviceContainer c = m_leftHelper.Install (m_routers.Get (0),
+                                                 m_leftLeaf.Get (i));
+      m_leftRouterDevices.Add (c.Get (0));
+      m_leftLeafDevices.Add (c.Get (1));
+    }
+}
+
+void AQMTopologyHelper::InstallStack()
 {
 	InternetStackHelper stack;
   InstallStack(stack);
 }
 
-void AQMTopologyHelper::InstallStack (InternetStackHelper stack)
+void AQMTopologyHelper::InstallStack(InternetStackHelper stack)
 {
   stack.Install (m_routers);
   stack.Install (m_leftLeaf);
@@ -91,7 +90,6 @@ void AQMTopologyHelper::InstallStack (InternetStackHelper stack)
 void AQMTopologyHelper::AssignIpv4Addresses (Ipv4AddressHelper leftIp,
                                             Ipv4AddressHelper routerIp)
 {
-  m_assigned = true;
   m_routerInterfaces = routerIp.Assign (m_routerDevices);
 
   for (uint32_t i = 0; i < LeftCount (); ++i)
@@ -102,8 +100,13 @@ void AQMTopologyHelper::AssignIpv4Addresses (Ipv4AddressHelper leftIp,
       Ipv4InterfaceContainer ifc = leftIp.Assign (ndc);
       m_leftLeafInterfaces.Add (ifc.Get (0));
       m_leftRouterInterfaces.Add (ifc.Get (1));
-      leftIp.NewNetwork ();
+      leftIp.NewNetwork();
     }
+}
+
+void AQMTopologyHelper::InstallTrafficControl(TrafficControlHelper trafficControlHelper)
+{
+  m_bottleneckQueueDisc = trafficControlHelper.Install(m_routerDevices.Get(0));
 }
 
 void AQMTopologyHelper::InstallPvPieTrafficControl()
@@ -113,12 +116,7 @@ void AQMTopologyHelper::InstallPvPieTrafficControl()
   InstallTrafficControl(trafficControlHelper);
 }
 
-void AQMTopologyHelper::InstallTrafficControl(TrafficControlHelper trafficControlHelper)
-{
-  m_bottleneckQueueDisc = trafficControlHelper.Install(m_routerDevices.Get(0));
-}
-
-void AQMTopologyHelper::InstallTrafficControl(uint32_t i, DelayClass delayClass)
+void AQMTopologyHelper::InstallPacketMarker(uint32_t i, DelayClass delayClass)
 {
     std::string qdClass;
     switch(delayClass)
@@ -141,6 +139,14 @@ void AQMTopologyHelper::InstallTrafficControl(uint32_t i, DelayClass delayClass)
     }
 }
 
+void AQMTopologyHelper::InstallPacketMarkers()
+{
+  for ( uint32_t i = 0; i < LeftCount(); ++i )
+  {
+    InstallPacketMarker(i, m_leafConfigurations[i].GetDelayClass());
+  }
+}
+
 void AQMTopologyHelper::InstallSinkApplication()
 {
   InstallSinkApplication(Seconds(0));
@@ -154,12 +160,7 @@ void AQMTopologyHelper::InstallSinkApplication(Time startTime)
   m_sinkApp.Start(startTime);
 }
 
-void AQMTopologyHelper::InstallApplication(uint32_t i)
-{
-  InstallApplication(i, Seconds(0), Seconds(0));
-}
-
-void AQMTopologyHelper::InstallApplication(uint32_t i, Time startTime, Time stopTime)
+void AQMTopologyHelper::InstallSourceApplication(uint32_t i, Time startTime, Time stopTime)
 {
   Address remoteAddress(InetSocketAddress(m_routerInterfaces.GetAddress(1), m_port));
   OnOffHelper applicationHelper("ns3::TcpSocketFactory", remoteAddress);
@@ -174,16 +175,22 @@ void AQMTopologyHelper::InstallApplication(uint32_t i, Time startTime, Time stop
   m_leftLeafApplications.Add(sourceApp);
 }
 
+void AQMTopologyHelper::InstallSourceApplications()
+{
+  for ( uint32_t i = 0; i < LeftCount(); ++i )
+  {
+    InstallSourceApplication(i, m_leafConfigurations[i].GetStartTime(), m_leafConfigurations[i].GetStopTime());
+  }
+}
+
 void AQMTopologyHelper::ConfigureLeaf(uint32_t i, DelayClass delayClass, Time startTime, Time stopTime)
 {
-  if ( m_assigned )
+  if ( m_initialized )
   {
     throw std::runtime_error("Cannot add new Leaf, IP addressess already configured!");
   }
 
-
-  // InstallTrafficControl(i, delayClass);
-  // InstallApplication(i, startTime, stopTime);
+  m_leafConfigurations.push_back(LeafConfigurationHelper(delayClass, startTime, stopTime));
 }
 
 }

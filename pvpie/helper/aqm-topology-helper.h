@@ -24,17 +24,14 @@ class AQMTopologyHelper {
     AQMTopologyHelper(std::string bottleneckBandwidth,
                      std::string bottleneckDelay,
                      std::string accessBandwidth,
-                     std::string accessDelay,
-                     uint32_t nLeftLeaf);
+                     std::string accessDelay);
+
     AQMTopologyHelper(PointToPointHelper bottleneckHelper,
-                     uint32_t nLeftLeaf,
                      PointToPointHelper leftHelper);
 
-    void Initialize(PointToPointHelper bottleneckHelper,
-                    uint32_t nLeftLeaf,
-                    PointToPointHelper leftHelper);
-
     ~AQMTopologyHelper();
+
+    uint32_t GetClientCount();
 
     Ptr<Node> GetLeft () const;
     Ptr<Node> GetLeft (uint32_t i) const;
@@ -43,27 +40,33 @@ class AQMTopologyHelper {
 
     uint32_t  LeftCount () const;
 
+    void Initialize();
     void InstallStack();
     void InstallStack(InternetStackHelper stack);
     void AssignIpv4Addresses(Ipv4AddressHelper leftIp,
                              Ipv4AddressHelper routerIp);
 
-    void InstallPvPieTrafficControl();
     void InstallTrafficControl(TrafficControlHelper trafficControlHelper);
-    void InstallTrafficControl(uint32_t i, DelayClass delayClass);
+    void InstallPvPieTrafficControl();
+
+    void InstallPacketMarker(uint32_t i, DelayClass delayClass);
+    void InstallPacketMarkers();
 
     void InstallSinkApplication();
     void InstallSinkApplication(Time startTime);
 
-    void InstallApplication(uint32_t i);
-    void InstallApplication(uint32_t i, Time startTime, Time stopTime);
+    void InstallSourceApplication(uint32_t i, Time startTime, Time stopTime);
+    void InstallSourceApplications();
 
     void ConfigureLeaf(uint32_t i, DelayClass delayClass, Time startTime, Time stopTime);
 
   // private:
     const int m_port = 777;
 
-    bool m_assigned = false;
+    bool m_initialized = false;
+
+    PointToPointHelper m_bottleneckHelper;
+    PointToPointHelper m_leftHelper;
 
     std::vector<LeafConfigurationHelper> m_leafConfigurations;
 

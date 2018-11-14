@@ -185,17 +185,17 @@ int main (int argc, char *argv[])
     AQMTopologyHelper topology = AQMTopologyHelper(bottleneckBandwidth,
                                                    bottleneckDelay,
                                                    accessBandwidth,
-                                                   accessDelay,
-                                                   nClients);
+                                                   accessDelay);
+
+    topology.Initialize();
     topology.InstallStack();
     topology.InstallPvPieTrafficControl();
-
-    topology.InstallTrafficControl(1, DelayClass::Gold);
+    topology.InstallPacketMarkers();
 
     topology.AssignIpv4Addresses(ns3::Ipv4AddressHelper("99.9.1.0", "255.255.255.0"),
                                  ns3::Ipv4AddressHelper("10.1.1.0", "255.255.255.0"));
     topology.InstallSinkApplication();
-    topology.InstallApplication(1, Seconds(0), Seconds(150));
+    topology.InstallSourceApplications();
 
 
     ns3::Ipv4GlobalRoutingHelper::PopulateRoutingTables();
