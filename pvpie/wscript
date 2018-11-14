@@ -14,7 +14,7 @@ def build(bld):
         # 'model/tlpie-queue-disc.cc',
         'model/packet-marker-queue-disc.cc',
         'model/packet-value-tag.cc',
-        'helper/leaf-helper.cc',
+        'helper/leaf-configuration-helper.cc',
         'helper/aqm-topology-helper.cc'
     ]
 
@@ -30,7 +30,7 @@ def build(bld):
         # 'model/tlpie-queue-disc.h',
         'model/packet-marker-queue-disc.h',
         'model/packet-value-tag.h',
-        'helper/leaf-helper.h',
+        'helper/leaf-configuration-helper.h',
         'helper/aqm-topology-helper.h',
     ]
 

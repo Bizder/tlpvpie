@@ -2,12 +2,16 @@
 #ifndef AQMTOPOLOGYHELPER_H
 #define AQMTOPOLOGYHELPER_H
 
+#include <vector>
+
 #include "ns3/point-to-point-helper.h"
 #include "ns3/ipv4-address-helper.h"
 #include "ns3/internet-stack-helper.h"
 #include "ns3/ipv4-interface-container.h"
 #include "ns3/applications-module.h"
 #include "ns3/traffic-control-module.h"
+
+#include "leaf-configuration-helper.h"
 
 namespace ns3 {
 
@@ -44,8 +48,6 @@ class AQMTopologyHelper {
     void AssignIpv4Addresses(Ipv4AddressHelper leftIp,
                              Ipv4AddressHelper routerIp);
 
-    enum class DelayClass { Gold, Silver, Background};
-
     void InstallPvPieTrafficControl();
     void InstallTrafficControl(TrafficControlHelper trafficControlHelper);
     void InstallTrafficControl(uint32_t i, DelayClass delayClass);
@@ -56,10 +58,14 @@ class AQMTopologyHelper {
     void InstallApplication(uint32_t i);
     void InstallApplication(uint32_t i, Time startTime, Time stopTime);
 
-    void ConfigureLeaf(uint32_t i, AQMTopologyHelper::DelayClass delayClass, Time startTime, Time stopTime);
+    void ConfigureLeaf(uint32_t i, DelayClass delayClass, Time startTime, Time stopTime);
 
   // private:
     const int m_port = 777;
+
+    bool m_assigned = false;
+
+    std::vector<LeafConfigurationHelper> m_leafConfigurations;
 
     NodeContainer m_leftLeaf;
     NetDeviceContainer m_leftLeafDevices;

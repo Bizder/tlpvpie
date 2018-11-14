@@ -1,12 +1,12 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
 #include "aqm-topology-helper.h"
-#include "leaf-helper.h"
+#include "leaf-configuration-helper.h"
 
 
 namespace ns3 {
 
-LeafHelper::LeafHelper(AQMTopologyHelper::DelayClass delayClass,
+LeafConfigurationHelper::LeafConfigurationHelper(DelayClass delayClass,
                        Time startTime,
                        Time stopTime)
 {
@@ -15,17 +15,17 @@ LeafHelper::LeafHelper(AQMTopologyHelper::DelayClass delayClass,
     m_stopTime = stopTime;
 }
 
-AQMTopologyHelper::DelayClass LeafHelper::GetDelayClass()
+DelayClass LeafConfigurationHelper::GetDelayClass()
 {
     return m_delayClass;
 }
 
-Time LeafHelper::GetStartTime()
+Time LeafConfigurationHelper::GetStartTime()
 {
     return m_startTime;
 }
 
-Time LeafHelper::GetStopTime()
+Time LeafConfigurationHelper::GetStopTime()
 {
     return m_stopTime;
 }

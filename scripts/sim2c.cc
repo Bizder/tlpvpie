@@ -190,7 +190,7 @@ int main (int argc, char *argv[])
     topology.InstallStack();
     topology.InstallPvPieTrafficControl();
 
-    topology.InstallTrafficControl(1, AQMTopologyHelper::DelayClass::Gold);
+    topology.InstallTrafficControl(1, DelayClass::Gold);
 
     topology.AssignIpv4Addresses(ns3::Ipv4AddressHelper("99.9.1.0", "255.255.255.0"),
                                  ns3::Ipv4AddressHelper("10.1.1.0", "255.255.255.0"));

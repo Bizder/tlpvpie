@@ -91,6 +91,7 @@ void AQMTopologyHelper::InstallStack (InternetStackHelper stack)
 void AQMTopologyHelper::AssignIpv4Addresses (Ipv4AddressHelper leftIp,
                                             Ipv4AddressHelper routerIp)
 {
+  m_assigned = true;
   m_routerInterfaces = routerIp.Assign (m_routerDevices);
 
   for (uint32_t i = 0; i < LeftCount (); ++i)
@@ -117,14 +118,14 @@ void AQMTopologyHelper::InstallTrafficControl(TrafficControlHelper trafficContro
   m_bottleneckQueueDisc = trafficControlHelper.Install(m_routerDevices.Get(0));
 }
 
-void AQMTopologyHelper::InstallTrafficControl(uint32_t i, AQMTopologyHelper::DelayClass delayClass)
+void AQMTopologyHelper::InstallTrafficControl(uint32_t i, DelayClass delayClass)
 {
     std::string qdClass;
     switch(delayClass)
     {
-      case AQMTopologyHelper::DelayClass::Gold: qdClass = "Gold"; break;
-      case AQMTopologyHelper::DelayClass::Silver: qdClass = "Silver"; break;
-      case AQMTopologyHelper::DelayClass::Background: qdClass = "Background"; break;
+      case DelayClass::Gold: qdClass = "Gold"; break;
+      case DelayClass::Silver: qdClass = "Silver"; break;
+      case DelayClass::Background: qdClass = "Background"; break;
     }
 
     TrafficControlHelper trafficControlHelper;
@@ -134,9 +135,9 @@ void AQMTopologyHelper::InstallTrafficControl(uint32_t i, AQMTopologyHelper::Del
 
     switch(delayClass)
     {
-      case AQMTopologyHelper::DelayClass::Gold: m_goldQueueDiscs.Add(qd); break;
-      case AQMTopologyHelper::DelayClass::Silver: m_silverQueueDiscs.Add(qd); break;
-      case AQMTopologyHelper::DelayClass::Background: m_backgroundQueueDiscs.Add(qd); break;
+      case DelayClass::Gold: m_goldQueueDiscs.Add(qd); break;
+      case DelayClass::Silver: m_silverQueueDiscs.Add(qd); break;
+      case DelayClass::Background: m_backgroundQueueDiscs.Add(qd); break;
     }
 }
 
@@ -173,10 +174,16 @@ void AQMTopologyHelper::InstallApplication(uint32_t i, Time startTime, Time stop
   m_leftLeafApplications.Add(sourceApp);
 }
 
-void AQMTopologyHelper::ConfigureLeaf(uint32_t i, AQMTopologyHelper::DelayClass delayClass, Time startTime, Time stopTime)
+void AQMTopologyHelper::ConfigureLeaf(uint32_t i, DelayClass delayClass, Time startTime, Time stopTime)
 {
-  InstallTrafficControl(i, delayClass);
-  InstallApplication(i, startTime, stopTime);
+  if ( m_assigned )
+  {
+    throw std::runtime_error("Cannot add new Leaf, IP addressess already configured!");
+  }
+
+
+  // InstallTrafficControl(i, delayClass);
+  // InstallApplication(i, startTime, stopTime);
 }
 
 }
