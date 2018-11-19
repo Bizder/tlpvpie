@@ -18,9 +18,6 @@ namespace ns3 {
 class AQMTopologyHelper {
 
   public:
-
-    // unsigned int packetSize = 1000;
-
     AQMTopologyHelper(std::string bottleneckBandwidth,
                      std::string bottleneckDelay,
                      std::string accessBandwidth,
