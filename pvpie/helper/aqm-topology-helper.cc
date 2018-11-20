@@ -167,30 +167,52 @@ void AQMTopologyHelper::InstallSinkApplication(Time startTime)
   m_sinkApp.Start(startTime);
 }
 
-void AQMTopologyHelper::InstallSourceApplication(uint32_t i, Time startTime, Time stopTime)
+void AQMTopologyHelper::InstallSourceApplication(uint32_t i,
+                                                 std::string transferProtocolClass,
+                                                 ApplicationType applicationType,
+                                                 Time startTime,
+                                                 Time stopTime)
 {
-  Address remoteAddress(InetSocketAddress(m_routerInterfaces.GetAddress(1), m_port));
-  OnOffHelper applicationHelper("ns3::TcpSocketFactory", remoteAddress);
-  applicationHelper.SetAttribute ("OnTime", StringValue("ns3::ConstantRandomVariable[Constant=1]"));
-  applicationHelper.SetAttribute ("OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0]"));
-  ApplicationContainer sourceApp = applicationHelper.Install(m_leftLeaf.Get(i));
-  sourceApp.Start(startTime);
-  if ( stopTime > 0 )
+  if ( transferProtocol != 'ns3::UdpSocketFactory' ) || ( transferProtocol != 'ns3::TcpSocketFactory' )
   {
-    sourceApp.Stop(stopTime);
+    throw std::runtime_error("Transfer protocol class has to be either ns3::UdpSocketFactory or ns3::TcpSocketFactory!");
   }
-  m_leftLeafApplications.Add(sourceApp);
+
+  Address remoteAddress(InetSocketAddress(m_routerInterfaces.GetAddress(1), m_port));
+  if ( applicatonType == ApplicatonType.Continuous )
+  {
+    OnOffHelper applicationHelper(transferProtocolClass, remoteAddress);
+    applicationHelper.SetAttribute ("OnTime", StringValue("ns3::ConstantRandomVariable[Constant=1]"));
+    applicationHelper.SetAttribute ("OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0]"));
+    ApplicationContainer sourceApp = applicationHelper.Install(m_leftLeaf.Get(i));
+    sourceApp.Start(startTime);
+    if ( stopTime > 0 ) { sourceApp.Stop(stopTime); }
+    m_leftLeafApplications.Add(sourceApp);
+  }
+  else if ( applicationType == ApplicatonType.Bulk )
+  {
+    BulkSendHelper applicationHelper(transferProtocolClass, remoteAddress);
+    // applicationHelper.SetAttribute ("OnTime", StringValue("ns3::ConstantRandomVariable[Constant=1]"));
+    // applicationHelper.SetAttribute ("OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0]"));
+    ApplicationContainer sourceApp = applicationHelper.Install(m_leftLeaf.Get(i));
+    sourceApp.Start(startTime);
+    if ( stopTime > 0 ) { sourceApp.Stop(stopTime); }
+    m_leftLeafApplications.Add(sourceApp);
+  }
 }
 
 void AQMTopologyHelper::InstallSourceApplications()
 {
   for ( uint32_t i = 0; i < LeftCount(); ++i )
   {
-    InstallSourceApplication(i, m_leafConfigurations[i].GetStartTime(), m_leafConfigurations[i].GetStopTime());
+    InstallSourceApplication(i, m_leafConfigurations[i].GetTransferProtocolClass(), m_leafConfigurations[i].GetStartTime(), m_leafConfigurations[i].GetStopTime());
   }
 }
 
-void AQMTopologyHelper::ConfigureLeaf(DelayClass delayClass, Time startTime, Time stopTime)
+void AQMTopologyHelper::ConfigureLeaf(DelayClass delayClass,
+                                      std::string transferProtocolClass,
+                                      Time startTime,
+                                      Time stopTime)
 {
   if ( m_initialized )
   {

@@ -20,6 +20,11 @@ DelayClass LeafConfigurationHelper::GetDelayClass()
     return m_delayClass;
 }
 
+std::string LeafConfigurationHelper::GetTransferProtocolClass()
+{
+    return m_transferProtocolClass;
+}
+
 Time LeafConfigurationHelper::GetStartTime()
 {
     return m_startTime;

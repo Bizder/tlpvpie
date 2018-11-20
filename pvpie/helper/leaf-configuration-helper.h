@@ -6,6 +6,8 @@ namespace ns3 {
 
 enum class DelayClass { Gold, Silver, Background};
 
+enum class ApplicatonType { Continuous, Bulk };
+
 class LeafConfigurationHelper {
 
 public:
@@ -19,6 +21,8 @@ public:
 
 private:
     DelayClass m_delayClass;
+    std::string m_transferProtocolClass;
+
     Time m_startTime;
     Time m_stopTime;
 };
