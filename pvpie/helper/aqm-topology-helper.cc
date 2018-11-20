@@ -116,6 +116,13 @@ void AQMTopologyHelper::InstallPvPieTrafficControl()
   InstallTrafficControl(trafficControlHelper);
 }
 
+void AQMTopologyHelper::InstallTlPvPieTrafficControl()
+{
+  TrafficControlHelper trafficControlHelper;
+  trafficControlHelper.SetRootQueueDisc("ns3::TlPvPieQueueDisc");
+  InstallTrafficControl(trafficControlHelper);
+}
+
 void AQMTopologyHelper::InstallPacketMarker(uint32_t i, DelayClass delayClass)
 {
     std::string qdClass;
@@ -183,7 +190,7 @@ void AQMTopologyHelper::InstallSourceApplications()
   }
 }
 
-void AQMTopologyHelper::ConfigureLeaf(uint32_t i, DelayClass delayClass, Time startTime, Time stopTime)
+void AQMTopologyHelper::ConfigureLeaf(DelayClass delayClass, Time startTime, Time stopTime)
 {
   if ( m_initialized )
   {

@@ -12,28 +12,13 @@
 #include "ns3/aqm-topology-helper.h"
 #include <vector>
 
+#include "tracehelper.h"
+
 #define OUTPUT_FOLDER std::string("output/")
 
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("PvPieSimulator");
-
-uint32_t receivedPackets = 0;
-uint32_t goldPackets = 0;
-uint32_t silverPackets = 0;
-uint32_t backgroundPackets = 0;
-
-std::vector<uint32_t> flowPackets;
-
-void QueueDelayTrace(ns3::Ptr<ns3::OutputStreamWrapper> stream,  ns3::Time oldValue,  ns3::Time newValue);
-void ThresholdValueTrace(ns3::Ptr<ns3::OutputStreamWrapper> stream, uint32_t oldValue,  uint32_t newValue);
-void PacketValueTrace(ns3::Ptr<ns3::OutputStreamWrapper> stream, uint32_t oldValue, uint32_t newValue);
-void ecdfTrace(ns3::Ptr<ns3::OutputStreamWrapper> stream, ns3::Ptr<ns3::PvPieQueueDisc> pqd);
-void ThroughputTrace(ns3::Ptr<ns3::OutputStreamWrapper> stream, ns3::Ptr<ns3::OutputStreamWrapper> gold, ns3::Ptr<ns3::OutputStreamWrapper> silver, ns3::Ptr<ns3::OutputStreamWrapper> background);
-void TransferRateTrace(ns3::Ptr<ns3::OutputStreamWrapper> stream, uint32_t oldValue, uint32_t newValue);
-void RxTrace(ns3::Ptr<const ns3::Packet> packet);
-void TimeTrace();
-void ThroughputMonitor (std::vector< ns3::Ptr<ns3::OutputStreamWrapper> > flows, ns3::Ptr<ns3::FlowMonitor> monitor, Ptr<Ipv4FlowClassifier> classifier);
 
 int main (int argc, char *argv[])
 {
@@ -45,21 +30,19 @@ int main (int argc, char *argv[])
     float stopTime = 150.0;
     unsigned int packetSize = 1000;
 
-    int nSilver = 0;
     int nGold = 3;
+    int nSilver = 0;
     int nBackground = 0;
-
-    int nClients = nSilver + nGold + nBackground;
+    int nClients = nGold + nSilver + nBackground;
 
     for ( int i = 0; i < nClients ; ++i )
     {
         flowPackets.push_back(0);
     }
 
-    ns3::AsciiTraceHelper asciiTraceHelper;
-
     std::string bottleneckBandwidth ="10Mbps";
     std::string bottleneckDelay = "20ms";
+
     std::string accessBandwidth = "10Mbps";
     std::string accessDelay = "2ms";
 
@@ -79,21 +62,43 @@ int main (int argc, char *argv[])
                                                    accessBandwidth,
                                                    accessDelay);
 
+    topology.ConfigureLeaf(DelayClass::Gold, Seconds(0), Seconds(0));
+    topology.ConfigureLeaf(DelayClass::Gold, Seconds(0), Seconds(0));
+    topology.ConfigureLeaf(DelayClass::Gold, Seconds(0), Seconds(0));
+    topology.ConfigureLeaf(DelayClass::Gold, Seconds(30), Seconds(120));
+    topology.ConfigureLeaf(DelayClass::Gold, Seconds(30), Seconds(120));
+    topology.ConfigureLeaf(DelayClass::Gold, Seconds(30), Seconds(120));
+    topology.ConfigureLeaf(DelayClass::Gold, Seconds(60), Seconds(90));
+    topology.ConfigureLeaf(DelayClass::Gold, Seconds(60), Seconds(90));
+    topology.ConfigureLeaf(DelayClass::Gold, Seconds(60), Seconds(90));
+
+    topology.ConfigureLeaf(DelayClass::Silver, Seconds(0), Seconds(0));
+    topology.ConfigureLeaf(DelayClass::Silver, Seconds(0), Seconds(0));
+    topology.ConfigureLeaf(DelayClass::Silver, Seconds(0), Seconds(0));
+    topology.ConfigureLeaf(DelayClass::Silver, Seconds(30), Seconds(120));
+    topology.ConfigureLeaf(DelayClass::Silver, Seconds(30), Seconds(120));
+    topology.ConfigureLeaf(DelayClass::Silver, Seconds(30), Seconds(120));
+    topology.ConfigureLeaf(DelayClass::Silver, Seconds(60), Seconds(90));
+    topology.ConfigureLeaf(DelayClass::Silver, Seconds(60), Seconds(90));
+    topology.ConfigureLeaf(DelayClass::Silver, Seconds(60), Seconds(90));
+
+    for ( int i = 0; i < nBackground ; ++i ) {
+        topology.ConfigureLeaf(DelayClass::Background, Seconds(0), Seconds(0));
+    }
+
     topology.Initialize();
     topology.InstallStack();
-    topology.InstallPvPieTrafficControl(); // change this line.
+    topology.InstallPvPieTrafficControl();
     topology.InstallPacketMarkers();
     topology.AssignIpv4Addresses(ns3::Ipv4AddressHelper("99.9.1.0", "255.255.255.0"),
-                                 ns3::Ipv4AddressHelper("10.1.1.0", "255.255.255.0"));
+                       ns3::Ipv4AddressHelper("10.1.1.0", "255.255.255.0"));
     topology.InstallSinkApplication();
     topology.InstallSourceApplications();
 
-
-    ns3::Ipv4GlobalRoutingHelper::PopulateRoutingTables();
-    ns3::Simulator::Stop(ns3::Seconds(stopTime));
-
     /******************************************** Logging ********************************************/
     // bottleNeckLink.EnablePcap(OUTPUT_FOLDER + "/pcap/BN_", routers.Get(0)->GetId(), 0);
+
+    ns3::AsciiTraceHelper asciiTraceHelper;
 
     ns3::Ptr<ns3::QueueDisc> qd = topology.m_bottleneckQueueDisc.Get(0);
     ns3::Ptr<ns3::PvPieQueueDisc> pqd = ns3::DynamicCast<ns3::PvPieQueueDisc>(qd);
@@ -101,16 +106,12 @@ int main (int argc, char *argv[])
     ns3::Ptr<ns3::OutputStreamWrapper> dropProbStream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/p.bn");
     pqd->TraceConnectWithoutContext ("Probability", ns3::MakeBoundCallback(&DropProbabilityTrace, dropProbStream));
     ns3::Ptr<ns3::OutputStreamWrapper> delayStream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/delay.bn");
-    pqd->TraceConnectWithoutContext ("QueueingDelay", ns3::MakeBoundCallback(&DelayTrace, delayStream));
+    pqd->TraceConnectWithoutContext ("QueueingDelay", ns3::MakeBoundCallback(&QueueDelayTrace, delayStream));
     ns3::Ptr<ns3::OutputStreamWrapper> tvStream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/tv.bn");
-    pqd->TraceConnectWithoutContext ("ThresholdValue", ns3::MakeBoundCallback(&TvTrace, tvStream));
+    pqd->TraceConnectWithoutContext ("ThresholdValue", ns3::MakeBoundCallback(&ThresholdValueTrace, tvStream));
 
     ns3::Ptr<ns3::OutputStreamWrapper> eCDFstream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/ecdf.bn");
-    ns3::Simulator::Schedule( ns3::Seconds(15.0), &ecdfTrace, eCDFstream, pqd);
-    ns3::Simulator::Schedule( ns3::Seconds(45.0), &ecdfTrace, eCDFstream, pqd);
-    ns3::Simulator::Schedule( ns3::Seconds(75.0), &ecdfTrace, eCDFstream, pqd);
-    ns3::Simulator::Schedule( ns3::Seconds(105.0), &ecdfTrace, eCDFstream, pqd);
-    ns3::Simulator::Schedule( ns3::Seconds(135.0), &ecdfTrace, eCDFstream, pqd);
+    for ( int i = 0; i < stopTime ; i = i + 15 ) { ns3::Simulator::Schedule( ns3::Seconds(0), &ecdfTrace, eCDFstream, pqd); }
 
     std::vector< ns3::Ptr<ns3::OutputStreamWrapper> > flowStreams;
     for ( int i = 0 ; i < nClients ; ++i )
@@ -147,131 +148,19 @@ int main (int argc, char *argv[])
     flowmon = flowmonHelper.InstallAll();
     ns3::Simulator::Schedule( ns3::Seconds(0.0), &ThroughputMonitor, flowStreams, flowmon, DynamicCast<Ipv4FlowClassifier>(flowmonHelper.GetClassifier()));
 
-    /********   ************************************ end of preconfiguration ********************************************/
-
     ns3::Simulator::Schedule( ns3::Seconds(1.0), &TimeTrace);
 
+    ns3::Ipv4GlobalRoutingHelper::PopulateRoutingTables();
+    ns3::Simulator::Stop(ns3::Seconds(stopTime));
     ns3::Simulator::Run ();
+    ns3::Simulator::Destroy();
 
     *throughputStream->GetStream() << std::to_string(stopTime) << "\t" << receivedPackets * 8 / 1000.0 / 1000.0 << std::endl;
     *goldStream->GetStream() << std::to_string(stopTime) << "\t" << goldPackets * 8 / 1000.0 / 1000.0 << std::endl;
     *silverStream->GetStream() << std::to_string(stopTime) << "\t" << silverPackets * 8 / 1000.0 / 1000.0 << std::endl;
     *backgroundStream->GetStream() << std::to_string(stopTime) << "\t" << backgroundPackets * 8 / 1000.0 / 1000.0 << std::endl;
 
-    ns3::Simulator::Destroy();
     return 0;
-} /* main */
-
-
-void QueueDelayTrace(ns3::Ptr<ns3::OutputStreamWrapper> stream,  ns3::Time oldValue,  ns3::Time newValue)
-{
-    *stream->GetStream() << ns3::Simulator::Now().GetSeconds() << "\t" << newValue.GetMilliSeconds() << std::endl;
 }
 
-void ThresholdValueTrace(ns3::Ptr<ns3::OutputStreamWrapper> stream, uint32_t oldValue,  uint32_t newValue)
-{
-    *stream->GetStream() << ns3::Simulator::Now().GetSeconds() << "\t" << newValue << std::endl;
-}
 
-void PacketValueTrace(ns3::Ptr<ns3::OutputStreamWrapper> stream, uint32_t oldValue, uint32_t newValue)
-{
-    *stream->GetStream() << ns3::Simulator::Now().GetSeconds() << "\t" << newValue << std::endl;
-}
-
-void ecdfTrace(ns3::Ptr<ns3::OutputStreamWrapper> stream, ns3::Ptr<ns3::PvPieQueueDisc> pqd)
-{
-    *stream->GetStream() << ns3::Simulator::Now().GetSeconds() << std::endl;
-
-    std::vector<uint32_t> values = pqd->eCDF_GetValues();
-    for ( uint32_t i = 0; i < values.size(); ++i )
-    {
-        *stream->GetStream() << values[i] << std::endl;
-    }
-    *stream->GetStream() << std::endl;
-}
-
-void ThroughputTrace(ns3::Ptr<ns3::OutputStreamWrapper> stream, ns3::Ptr<ns3::OutputStreamWrapper> gold, ns3::Ptr<ns3::OutputStreamWrapper> silver, ns3::Ptr<ns3::OutputStreamWrapper> background)
-{
-    *stream->GetStream() << ns3::Simulator::Now().GetSeconds() << "\t" << receivedPackets * 8 / 1000.0 / 1000.0 << std::endl;
-    *gold->GetStream() << ns3::Simulator::Now().GetSeconds() << "\t" << goldPackets * 8 / 1000.0 / 1000.0 << std::endl;
-    *silver->GetStream() << ns3::Simulator::Now().GetSeconds() << "\t" << silverPackets * 8 / 1000.0 / 1000.0 << std::endl;
-    *background->GetStream() << ns3::Simulator::Now().GetSeconds() << "\t" << backgroundPackets * 8 / 1000.0 / 1000.0 << std::endl;
-
-    receivedPackets = 0;
-    goldPackets = 0;
-    silverPackets = 0;
-    backgroundPackets = 0;
-    ns3::Simulator::Schedule(ns3::Seconds(1.0), &ThroughputTrace, stream, gold, silver, background);
-}
-
-void TransferRateTrace(ns3::Ptr<ns3::OutputStreamWrapper> stream, uint32_t oldValue, uint32_t newValue)
-{
-    *stream->GetStream() << ns3::Simulator::Now().GetSeconds() << "\t" << newValue << std::endl;
-}
-
-void RxTrace (ns3::Ptr<const ns3::Packet> packet)
-{
-    receivedPackets += packet->GetSize();
-
-    ns3::PacketValueTag tag;
-    packet->PeekPacketTag(tag);
-    uint8_t delayclass = tag.GetDelayClass();
-
-    if ( delayclass == 1 )
-    {
-        goldPackets += packet->GetSize();
-    }
-    else if ( delayclass == 2 )
-    {
-        silverPackets += packet->GetSize();
-    }
-    else
-    {
-        backgroundPackets += packet->GetSize();
-    }
-}
-
-void TimeTrace()
-{
-    std::cerr << ns3::Simulator::Now().GetSeconds() << std::endl;
-    ns3::Simulator::Schedule(ns3::Seconds(1.0), &TimeTrace);
-}
-
-void ThroughputMonitor (std::vector< ns3::Ptr<ns3::OutputStreamWrapper> > flows, ns3::Ptr<ns3::FlowMonitor> monitor, Ptr<Ipv4FlowClassifier> classifier)
-{
-    std::map<ns3::FlowId, ns3::FlowMonitor::FlowStats> stats = monitor->GetFlowStats ();
-    for (std::map<ns3::FlowId, ns3::FlowMonitor::FlowStats>::const_iterator i = stats.begin (); i != stats.end (); ++i)
-    {
-      ns3::Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
-      if (t.destinationAddress == "99.9.1.2")
-      {
-        uint32_t num = t.sourceAddress.Get();
-        num = ((num - 1 - 167772160 - 65536) / 256 ) -1 ;
-
-        ns3::Ptr<ns3::OutputStreamWrapper> s;
-        s = flows[num];
-
-        double data = 0;
-
-        if (int(ns3::Simulator::Now().GetSeconds()) % 30 > 0 )
-        {
-            data = (i->second.rxBytes - flowPackets[num] ) / double((int(ns3::Simulator::Now().GetSeconds()) % 30)) * 8 / 1000.0 / 1000.0;
-        }
-        else
-        {
-            data = (i->second.rxBytes - flowPackets[num] ) / ns3::Simulator::Now().GetSeconds() * 8 / 1000.0 / 1000.0;
-        }
-
-        if ( data > 0 && ns3::Simulator::Now().GetSeconds() > 65.0)
-        {
-            *s->GetStream() << ns3::Simulator::Now().GetSeconds() << "\t" << data << std::endl;
-        }
-
-        if ( int(ns3::Simulator::Now().GetSeconds()) % 30 == 0 )
-        {
-            flowPackets[num] = i->second.rxBytes;
-        }
-      }
-    }
-    ns3::Simulator::Schedule(ns3::Seconds(1.0), &ThroughputMonitor, flows, monitor, classifier);
-}

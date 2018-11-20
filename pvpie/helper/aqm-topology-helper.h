@@ -38,6 +38,7 @@ class AQMTopologyHelper {
     uint32_t  LeftCount () const;
 
     void Initialize();
+
     void InstallStack();
     void InstallStack(InternetStackHelper stack);
     void AssignIpv4Addresses(Ipv4AddressHelper leftIp,
@@ -45,6 +46,7 @@ class AQMTopologyHelper {
 
     void InstallTrafficControl(TrafficControlHelper trafficControlHelper);
     void InstallPvPieTrafficControl();
+    void InstallTlPvPieTrafficControl();
 
     void InstallPacketMarker(uint32_t i, DelayClass delayClass);
     void InstallPacketMarkers();
@@ -55,7 +57,7 @@ class AQMTopologyHelper {
     void InstallSourceApplication(uint32_t i, Time startTime, Time stopTime);
     void InstallSourceApplications();
 
-    void ConfigureLeaf(uint32_t i, DelayClass delayClass, Time startTime, Time stopTime);
+    void ConfigureLeaf(DelayClass delayClass, Time startTime, Time stopTime);
 
   // private:
     const int m_port = 777;
