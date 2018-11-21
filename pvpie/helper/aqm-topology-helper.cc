@@ -192,8 +192,6 @@ void AQMTopologyHelper::InstallSourceApplication(uint32_t i,
   else if ( applicationType == ApplicatonType.Bulk )
   {
     BulkSendHelper applicationHelper(transferProtocolClass, remoteAddress);
-    // applicationHelper.SetAttribute ("OnTime", StringValue("ns3::ConstantRandomVariable[Constant=1]"));
-    // applicationHelper.SetAttribute ("OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0]"));
     ApplicationContainer sourceApp = applicationHelper.Install(m_leftLeaf.Get(i));
     sourceApp.Start(startTime);
     if ( stopTime > 0 ) { sourceApp.Stop(stopTime); }
