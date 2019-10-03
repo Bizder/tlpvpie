@@ -2,6 +2,8 @@
 #ifndef LEAF_CONFIGURATION_HELPER_H
 #define LEAF_CONFIGURATION_HELPER_H
 
+#include "IApplicationHelperFactory.h"
+
 namespace ns3 {
 
 enum class DelayClass { Gold, Silver, Background};
@@ -16,13 +18,14 @@ public:
                Time stopTime);
 
     DelayClass GetDelayClass();
+    std::string GetTransferProtocolClass();
+    IApplicationHelperFactory::APPLICATION_HELPERS GetApplicationType();
     Time GetStartTime();
     Time GetStopTime();
 
 private:
     DelayClass m_delayClass;
     std::string m_transferProtocolClass;
-
     Time m_startTime;
     Time m_stopTime;
 };

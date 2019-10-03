@@ -3,6 +3,7 @@
 #include <iostream>
 #include "ns3/log.h"
 #include "aqm-topology-helper.h"
+#include "IApplicationHelperFactory.h"
 
 
 namespace ns3 {
@@ -169,7 +170,7 @@ void AQMTopologyHelper::InstallSinkApplication(Time startTime)
 
 void AQMTopologyHelper::InstallSourceApplication(uint32_t i,
                                                  std::string transferProtocolClass,
-                                                 ApplicationType applicationType,
+                                                 IApplicationHelperFactory::APPLICATION_HELPERS applicationHelper
                                                  Time startTime,
                                                  Time stopTime)
 {
@@ -179,24 +180,12 @@ void AQMTopologyHelper::InstallSourceApplication(uint32_t i,
   }
 
   Address remoteAddress(InetSocketAddress(m_routerInterfaces.GetAddress(1), m_port));
-  if ( applicatonType == ApplicatonType.Continuous )
-  {
-    OnOffHelper applicationHelper(transferProtocolClass, remoteAddress);
-    applicationHelper.SetAttribute ("OnTime", StringValue("ns3::ConstantRandomVariable[Constant=1]"));
-    applicationHelper.SetAttribute ("OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0]"));
-    ApplicationContainer sourceApp = applicationHelper.Install(m_leftLeaf.Get(i));
-    sourceApp.Start(startTime);
-    if ( stopTime > 0 ) { sourceApp.Stop(stopTime); }
-    m_leftLeafApplications.Add(sourceApp);
-  }
-  else if ( applicationType == ApplicatonType.Bulk )
-  {
-    BulkSendHelper applicationHelper(transferProtocolClass, remoteAddress);
-    ApplicationContainer sourceApp = applicationHelper.Install(m_leftLeaf.Get(i));
-    sourceApp.Start(startTime);
-    if ( stopTime > 0 ) { sourceApp.Stop(stopTime); }
-    m_leftLeafApplications.Add(sourceApp);
-  }
+
+  IApplicationHelperFactory *factory = IApplicationHelperFactory::CreateFactory(applicationHelper);
+  ApplicationContainer sourceApp = factory->GetApplicationHelper()->Install(m_leftLeaf.Get(i))
+  sourceApp.Start(startTime);
+  if ( stopTime > 0 ) { sourceApp.Stop(stopTime); }
+  m_leftLeafApplications.Add(sourceApp);
 }
 
 void AQMTopologyHelper::InstallSourceApplications()
@@ -209,12 +198,13 @@ void AQMTopologyHelper::InstallSourceApplications()
 
 void AQMTopologyHelper::ConfigureLeaf(DelayClass delayClass,
                                       std::string transferProtocolClass,
+
                                       Time startTime,
                                       Time stopTime)
 {
   if ( m_initialized )
   {
-    throw std::runtime_error("Cannot add new Leaf, IP addressess already configured!");
+    throw std::runtime_error("Cannot add new Leaf after IP addressess are configured!");
   }
 
   m_leafConfigurations.push_back(LeafConfigurationHelper(delayClass, startTime, stopTime));

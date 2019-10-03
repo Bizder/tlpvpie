@@ -15,10 +15,6 @@ TODO:
 [x] Add delay class to tags for easier statistics
 [x] PVPIE - eCDF function
 [x] PIE to PVPIE modification
-[ ] python script to run from config files
-[ ] trace different delay class latencies (delay class + current delay)
-[ ] add inner PIE controller to replace eCDF
-[ ]
-[ ]
-[ ]
-
+[x] python script to run from config files
+[x] trace different delay class latencies (delay class + current delay)
+[x] add inner PIE controller to replace eCDF
