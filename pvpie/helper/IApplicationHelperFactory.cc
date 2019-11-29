@@ -14,7 +14,7 @@ IApplicationHelperFactory* IApplicationHelperFactory::CreateFactory(APPLICATION_
     {
         return new BulkSendApplicationFactory();
     }
-
+    return new OnOffApplicationFactory();
 }
 
 }

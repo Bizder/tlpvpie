@@ -25,8 +25,8 @@
  * Most of the comments are also ported from the same.
  */
 
-#ifndef PVPIE_QUEUE_DISC_H
-#define PVPIE_QUEUE_DISC_H
+#ifndef TLPIE_QUEUE_DISC_H
+#define TLPIE_QUEUE_DISC_H
 
 #include "ns3/queue-disc.h"
 #include "ns3/nstime.h"
@@ -41,16 +41,11 @@
 
 namespace ns3 {
 
-struct PacketValueRecord {
-  PacketValueRecord(double time, uint32_t packet_value) : receive_time(time), packet_value(packet_value) {};
+struct DropRecord {
+  DropRecord(double time, bool dropped) : receive_time(time), dropped(dropped) {};
 
   double receive_time;
-  uint32_t packet_value;
-
-  bool operator < (const PacketValueRecord &rhs) const
-  {
-    return receive_time < rhs.receive_time;
-  }
+  bool dropped;
 
 };
 
@@ -62,7 +57,7 @@ class UniformRandomVariable;
  *
  * \brief Implements PIE Active Queue Management discipline
  */
-class PvPieQueueDisc : public QueueDisc
+class TlPieQueueDisc : public QueueDisc
 {
 public:
   /**
@@ -72,14 +67,14 @@ public:
   static TypeId GetTypeId (void);
 
   /**
-   * \brief PvPieQueueDisc Constructor
+   * \brief TlPieQueueDisc Constructor
    */
-  PvPieQueueDisc ();
+  TlPieQueueDisc ();
 
   /**
-   * \brief PvPieQueueDisc Destructor
+   * \brief TlPieQueueDisc Destructor
    */
-  virtual ~PvPieQueueDisc ();
+  virtual ~TlPieQueueDisc ();
 
   /**
    * \brief Burst types
@@ -108,8 +103,6 @@ public:
    */
   int64_t AssignStreams (int64_t stream);
 
-  std::vector<uint32_t> eCDF_GetValues();
-
   // Reasons for dropping packets
   static constexpr const char* UNFORCED_DROP = "Unforced drop";  //!< Early probability drops: proactive
   static constexpr const char* FORCED_DROP = "Forced drop";      //!< Drops due to queue limit: reactive
@@ -123,6 +116,7 @@ protected:
 private:
   virtual bool DoEnqueue (Ptr<QueueDiscItem> item);
   virtual Ptr<QueueDiscItem> DoDequeue (void);
+  // virtual Ptr<const QueueDiscItem> DoPeek (void) const;
   virtual bool CheckConfig (void);
 
   /**
@@ -144,29 +138,37 @@ private:
    * is going, up or down
    */
   void CalculateP();
+  void CalculateV();
 
-   static const uint64_t DQCOUNT_INVALID = std::numeric_limits<uint64_t>::max();  //!< Invalid dqCount value
+  static const uint64_t DQCOUNT_INVALID = std::numeric_limits<uint64_t>::max();  //!< Invalid dqCount value
 
-  uint32_t eCDF_GetThresholdValue();
-  void eCDF_AddValue(double, uint32_t);
-  void eCDF_RemoveOldValues();
+  double GetRealDropRate();
+  void AddDrop(double, bool);
+  void RemoveOldValues();
 
-  std::vector<PacketValueRecord> m_eCDF;
-  double m_eCDF_timedelta;
+  std::vector<DropRecord> m_droprecord;
+  double m_drop_timedelta;
 
   // ** Variables supplied by user
-  Time m_sUpdate;                               //!< Start time of the update timer
-  Time m_tUpdate;                               //!< Time period after which CalculateP () is called
+  Time m_sUpdate1;                              //!< Start time of the update timer
+  Time m_tUpdate1;                              //!< Time period after which CalculateP () is called
+  Time m_sUpdate2;                              //!< Start time of the update timer
+  Time m_tUpdate2;                              //!< Time period after which CalculateP () is called
   Time m_qDelayRef;                             //!< Desired queue delay
   uint32_t m_meanPktSize;                       //!< Average packet size in bytes
   Time m_maxBurst;                              //!< Maximum burst allowed before random early dropping kicks in
   double m_a;                                   //!< Parameter to pie controller
   double m_b;                                   //!< Parameter to pie controller
+  double m_f;                                   //!< Parameter to second layer pie controller
+  double m_p;                                   //!< Parameter to second layer pie controller
   uint32_t m_dqThreshold;                       //!< Minimum queue size in bytes before dequeue rate is measured
+  int32_t m_vmin;                               //!< Literally no clue
+  int32_t m_vmax;                               //!< Literally no clue
 
   // ** Variables maintained by PIE
   TracedValue<uint32_t> m_thresholdValue;       //!< threshold value
   TracedValue<double> m_dropProb;               //!< Variable used in calculation of drop probability
+  double m_dropProbOld;
   Time m_qDelayOld;                             //!< Old value of queue delay
   TracedValue<Time> m_qDelay;                   //!< Current value of queue delay
   Time m_burstAllowance;                        //!< Current max burst value in seconds that is allowed before random drops kick in
@@ -176,7 +178,8 @@ private:
   double m_avgDqRate;                           //!< Time averaged dequeue rate
   double m_dqStart;                             //!< Start timestamp of current measurement cycle
   uint64_t m_dqCount;                           //!< Number of bytes departed since current measurement cycle starts
-  EventId m_rtrsEvent;                          //!< Event used to decide the decision of interval of drop probability calculation
+  EventId m_rtrsEvent_p;                        //!< Event used to decide the decision of interval of drop probability calculation
+  EventId m_rtrsEvent_v;                        //!< Event used to decide the decision of interval of drop probability calculation
   Ptr<UniformRandomVariable> m_uv;              //!< Rng stream
 };
 

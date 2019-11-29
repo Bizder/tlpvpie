@@ -54,7 +54,11 @@ class AQMTopologyHelper {
     void InstallSinkApplication();
     void InstallSinkApplication(Time startTime);
 
-    void InstallSourceApplication(uint32_t i, Time startTime, Time stopTime);
+    void InstallSourceApplication(uint32_t i,
+                                  std::string transferProtocolClass,
+                                  IApplicationHelperFactory::APPLICATION_HELPERS applicationHelper,
+                                  Time startTime,
+                                  Time stopTime);
     void InstallSourceApplications();
 
     void ConfigureLeaf(DelayClass delayClass, Time startTime, Time stopTime);

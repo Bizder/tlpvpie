@@ -53,6 +53,12 @@ static TypeId tid = TypeId ("ns3::PacketMarkerQueueDisc")
 					"Transfer rate of application calculated by EWMA",
 					MakeTraceSourceAccessor (&PacketMarkerQueueDisc::m_transferRate),
 					"ns3::TracedValueCallback::UInteger")
+    .AddAttribute ("MaxSize",
+                   "The maximum number of packets accepted by this queue disc",
+                   QueueSizeValue (QueueSize ("5p")),
+                   MakeQueueSizeAccessor (&QueueDisc::SetMaxSize,
+                                          &QueueDisc::GetMaxSize),
+                   MakeQueueSizeChecker ())
 	;
 
 	return tid;
@@ -99,7 +105,8 @@ bool PacketMarkerQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 	double u = m_uv->GetValue();
 
 	uint32_t packet_value = throughputValueFunction(m_transferRate);
-	packet_value += (500000000 - packet_value) * u;
+
+	packet_value = (500000000 - packet_value) * u + packet_value;
 
 	PacketValueTag tag;
 	tag.SetPacketValue(packet_value);
@@ -171,12 +178,11 @@ bool PacketMarkerQueueDisc::CheckConfig (void)
 	}
 
 	if (GetNInternalQueues () == 0)
-    {
-      // create a DropTail queue
+	{
+		// create a DropTail queue
       AddInternalQueue (CreateObjectWithAttributes<DropTailQueue<QueueDiscItem> >
-                          ("MaxSize", QueueSizeValue (QueueSize ("5p"))));
-
-    }
+                        ("MaxSize", QueueSizeValue (GetMaxSize ())));
+	}
 
 	if (GetNInternalQueues () != 1)
 	{

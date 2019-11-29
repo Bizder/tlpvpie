@@ -1,7 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
 // Include a header file from your module to test.
-#include "ns3/pvpie.h"
+#include "ns3/pvpie-queue-disc.h"
 
 // An essential include is test.h
 #include "ns3/test.h"
@@ -11,25 +11,25 @@
 using namespace ns3;
 
 // This is an example TestCase.
-class PvpieTestCase1 : public TestCase
+class PvpieQueueDiscTestCase1 : public TestCase
 {
 public:
-  PvpieTestCase1 ();
-  virtual ~PvpieTestCase1 ();
+  PvpieQueueDiscTestCase1 ();
+  virtual ~PvpieQueueDiscTestCase1 ();
 
 private:
   virtual void DoRun (void);
 };
 
 // Add some help text to this case to describe what it is intended to test
-PvpieTestCase1::PvpieTestCase1 ()
+PvpieQueueDiscTestCase1::PvpieQueueDiscTestCase1 ()
   : TestCase ("Pvpie test case (does nothing)")
 {
 }
 
 // This destructor does nothing but we include it as a reminder that
 // the test case should clean up after itself
-PvpieTestCase1::~PvpieTestCase1 ()
+PvpieQueueDiscTestCase1::~PvpieQueueDiscTestCase1 ()
 {
 }
 
@@ -38,7 +38,7 @@ PvpieTestCase1::~PvpieTestCase1 ()
 // TestCase must implement
 //
 void
-PvpieTestCase1::DoRun (void)
+PvpieQueueDiscTestCase1::DoRun (void)
 {
   // A wide variety of test macros are available in src/core/test.h
   NS_TEST_ASSERT_MSG_EQ (true, true, "true doesn't equal true for some reason");
@@ -60,7 +60,7 @@ PvpieTestSuite::PvpieTestSuite ()
   : TestSuite ("pvpie", UNIT)
 {
   // TestDuration for TestCase can be QUICK, EXTENSIVE or TAKES_FOREVER
-  AddTestCase (new PvpieTestCase1, TestCase::QUICK);
+  AddTestCase (new PvpieQueueDiscTestCase1, TestCase::QUICK);
 }
 
 // Do not forget to allocate an instance of this TestSuite

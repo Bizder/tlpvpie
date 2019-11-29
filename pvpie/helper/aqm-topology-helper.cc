@@ -170,19 +170,21 @@ void AQMTopologyHelper::InstallSinkApplication(Time startTime)
 
 void AQMTopologyHelper::InstallSourceApplication(uint32_t i,
                                                  std::string transferProtocolClass,
-                                                 IApplicationHelperFactory::APPLICATION_HELPERS applicationHelper
+                                                 IApplicationHelperFactory::APPLICATION_HELPERS applicationHelper,
                                                  Time startTime,
                                                  Time stopTime)
 {
-  if ( transferProtocol != 'ns3::UdpSocketFactory' ) || ( transferProtocol != 'ns3::TcpSocketFactory' )
+  if (( transferProtocolClass != "ns3::UdpSocketFactory" ) && ( transferProtocolClass != "ns3::TcpSocketFactory" ))
   {
-    throw std::runtime_error("Transfer protocol class has to be either ns3::UdpSocketFactory or ns3::TcpSocketFactory!");
+    std::cout << i << std::endl;
+    std::cout << transferProtocolClass << std::endl;
+    throw std::runtime_error("InstallSourceApplicaiton: Transfer protocol class has to be either ns3::UdpSocketFactory or ns3::TcpSocketFactory!");
   }
 
   Address remoteAddress(InetSocketAddress(m_routerInterfaces.GetAddress(1), m_port));
 
   IApplicationHelperFactory *factory = IApplicationHelperFactory::CreateFactory(applicationHelper);
-  ApplicationContainer sourceApp = factory->GetApplicationHelper()->Install(m_leftLeaf.Get(i))
+  ApplicationContainer sourceApp = factory->GetApplicationHelper()->Install(m_leftLeaf.Get(i), transferProtocolClass, remoteAddress);
   sourceApp.Start(startTime);
   if ( stopTime > 0 ) { sourceApp.Stop(stopTime); }
   m_leftLeafApplications.Add(sourceApp);
@@ -192,13 +194,11 @@ void AQMTopologyHelper::InstallSourceApplications()
 {
   for ( uint32_t i = 0; i < LeftCount(); ++i )
   {
-    InstallSourceApplication(i, m_leafConfigurations[i].GetTransferProtocolClass(), m_leafConfigurations[i].GetStartTime(), m_leafConfigurations[i].GetStopTime());
+    InstallSourceApplication(i, m_leafConfigurations[i].GetTransferProtocolClass(), IApplicationHelperFactory::APPLICATION_HELPERS::ONOFF, m_leafConfigurations[i].GetStartTime(), m_leafConfigurations[i].GetStopTime());
   }
 }
 
 void AQMTopologyHelper::ConfigureLeaf(DelayClass delayClass,
-                                      std::string transferProtocolClass,
-
                                       Time startTime,
                                       Time stopTime)
 {

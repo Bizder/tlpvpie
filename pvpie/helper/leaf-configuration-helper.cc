@@ -11,6 +11,18 @@ LeafConfigurationHelper::LeafConfigurationHelper(DelayClass delayClass,
                        Time stopTime)
 {
     m_delayClass = delayClass;
+    m_transferProtocolClass = "ns3::UdpSocketFactory";
+    m_startTime = startTime;
+    m_stopTime = stopTime;
+}
+
+LeafConfigurationHelper::LeafConfigurationHelper(DelayClass delayClass,
+                       std::string transferProtocolClass,
+                       Time startTime,
+                       Time stopTime)
+{
+    m_delayClass = delayClass;
+    m_transferProtocolClass = transferProtocolClass;
     m_startTime = startTime;
     m_stopTime = stopTime;
 }

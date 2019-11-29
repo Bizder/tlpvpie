@@ -2,6 +2,7 @@
 #ifndef LEAF_CONFIGURATION_HELPER_H
 #define LEAF_CONFIGURATION_HELPER_H
 
+
 #include "IApplicationHelperFactory.h"
 
 namespace ns3 {
@@ -16,6 +17,11 @@ public:
     LeafConfigurationHelper(DelayClass delayClass,
                Time startTime,
                Time stopTime);
+
+    LeafConfigurationHelper(DelayClass delayClass,
+            std::string transferProtocolClass,
+            Time startTime,
+            Time stopTime);
 
     DelayClass GetDelayClass();
     std::string GetTransferProtocolClass();

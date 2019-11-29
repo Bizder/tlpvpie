@@ -1,3 +1,5 @@
+#include <vector>
+
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
@@ -10,7 +12,7 @@
 #include "ns3/packet-value-tag.h"
 #include "ns3/packet-marker-queue-disc.h"
 #include "ns3/aqm-topology-helper.h"
-#include <vector>
+
 
 #include "tracehelper.h"
 

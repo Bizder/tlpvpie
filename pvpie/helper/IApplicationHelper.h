@@ -1,3 +1,9 @@
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+#ifndef IAPPLICATIONHELPER_H
+#define IAPPLICATIONHELPER_H
+
+
+#include "ns3/core-module.h"
 #include "ns3/applications-module.h"
 
 namespace ns3
@@ -5,7 +11,7 @@ namespace ns3
 
 class IApplicationHelper {
     public:
-        virtual ApplicationContainer Install(Ptr<Node> node) = 0;
+        virtual ApplicationContainer Install(Ptr<Node> node, std::string transferProtocolClass, Address remoteAddress) = 0;
 };
 
 
@@ -17,7 +23,7 @@ public:
         OnOffHelper applicationHelper(transferProtocolClass, remoteAddress);
         applicationHelper.SetAttribute ("OnTime", StringValue("ns3::ConstantRandomVariable[Constant=1]"));
         applicationHelper.SetAttribute ("OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0]"));
-        return applicationHelper.Install(m_leftLeaf.Get(i));
+        return applicationHelper.Install(node);
     }
 
 };
@@ -28,9 +34,11 @@ public:
     ApplicationContainer Install(Ptr<Node> node, std::string transferProtocolClass, Address remoteAddress)
     {
         BulkSendHelper applicationHelper(transferProtocolClass, remoteAddress);
-        return applicationHelper.Install(m_leftLeaf.Get(i));
+        return applicationHelper.Install(node);
     }
 
 };
 
 }
+
+#endif /* IAPPLICATIONHELPER_H */

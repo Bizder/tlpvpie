@@ -1,3 +1,7 @@
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+#ifndef IAPPLICATIONHELPERFACTORY_H
+#define IAPPLICATIONHELPERFACTORY_H
+
 #include "ns3/applications-module.h"
 #include "IApplicationHelper.h"
 
@@ -25,7 +29,7 @@ class OnOffApplicationFactory : public IApplicationHelperFactory
         {
             return new OnOffApplicationHelper();
         }
-}
+};
 
 class BulkSendApplicationFactory : public IApplicationHelperFactory
 {
@@ -34,6 +38,8 @@ class BulkSendApplicationFactory : public IApplicationHelperFactory
         {
             return new BulkSendApplicationHelper();
         }
-}
+};
 
 }
+
+#endif /* IAPPLICATIONHELPERFACTORY_H */
