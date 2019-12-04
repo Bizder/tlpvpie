@@ -10,57 +10,91 @@ namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("AQMTopologyHelper");
 
+/* TODO: encapsulate to string method in the DelayClass enum */
+const std::string DelayClassToString(DelayClass e)
+{
+  const std::map<DelayClass,std::string> DelayEnumStrings {
+      { DelayClass::Gold, "DelayClass::Gold" },
+      { DelayClass::Silver, "DelayClass::Silver" },
+      { DelayClass::Background, "DelayClass::Background" }
+  };
+
+  auto   it  = DelayEnumStrings.find(e);
+
+  if ( it == DelayEnumStrings.end() )
+  {
+    std::runtime_error("DelayclassToString: Invalid DelayClass");
+  }
+
+  return it->second;
+}
+
 AQMTopologyHelper::AQMTopologyHelper(std::string bottleneckBandwidth,
                                    std::string bottleneckDelay,
                                    std::string accessBandwidth,
                                    std::string accessDelay)
 {
-    PointToPointHelper bottleneckLink;
-    bottleneckLink.SetDeviceAttribute("DataRate", StringValue(bottleneckBandwidth));
-    bottleneckLink.SetChannelAttribute("Delay", StringValue(bottleneckDelay));
-    bottleneckLink.SetQueue ("ns3::DropTailQueue", "MaxSize", QueueSizeValue (QueueSize ("1p")));
+  NS_LOG_FUNCTION (this);
 
-    PointToPointHelper leafLink;
-    leafLink.SetDeviceAttribute("DataRate", StringValue(accessBandwidth));
-    leafLink.SetChannelAttribute("Delay", StringValue(accessDelay));
+  PointToPointHelper bottleneckLink;
+  bottleneckLink.SetDeviceAttribute("DataRate", StringValue(bottleneckBandwidth));
+  bottleneckLink.SetChannelAttribute("Delay", StringValue(bottleneckDelay));
+  bottleneckLink.SetQueue ("ns3::DropTailQueue", "MaxSize", QueueSizeValue (QueueSize ("1p")));
 
-    m_bottleneckHelper = bottleneckLink;
-    m_leftHelper = leafLink;
+  PointToPointHelper leafLink;
+  leafLink.SetDeviceAttribute("DataRate", StringValue(accessBandwidth));
+  leafLink.SetChannelAttribute("Delay", StringValue(accessDelay));
+
+  m_bottleneckHelper = bottleneckLink;
+  m_leftHelper = leafLink;
 }
 
 AQMTopologyHelper::AQMTopologyHelper(PointToPointHelper bottleneckHelper,
                                    PointToPointHelper leftHelper)
 {
+  NS_LOG_FUNCTION (this);
+
   m_bottleneckHelper = bottleneckHelper;
   m_leftHelper = leftHelper;
 }
 
 AQMTopologyHelper::~AQMTopologyHelper()
 {
+  NS_LOG_FUNCTION (this);
 }
 
 Ptr<Node> AQMTopologyHelper::GetLeft () const
 {
+  NS_LOG_FUNCTION (this);
+
   return m_routers.Get (0);
 }
 
-Ptr<Node> AQMTopologyHelper::GetLeft (uint32_t) const
+Ptr<Node> AQMTopologyHelper::GetLeft (uint32_t index) const
 {
-  return m_leftLeaf.Get (0);
+  NS_LOG_FUNCTION (this << index);
+
+  return m_leftLeaf.Get (index);
 }
 
 Ptr<Node> AQMTopologyHelper::GetRight () const
 {
+  NS_LOG_FUNCTION (this);
+
   return m_routers.Get (1);
 }
 
 uint32_t  AQMTopologyHelper::LeftCount () const
 {
+  NS_LOG_FUNCTION (this);
+
   return m_leafConfigurations.size();
 }
 
 void AQMTopologyHelper::Initialize()
 {
+  NS_LOG_FUNCTION (this);
+
   m_initialized = true;
 
   m_routers.Create(2);
@@ -78,12 +112,16 @@ void AQMTopologyHelper::Initialize()
 
 void AQMTopologyHelper::InstallStack()
 {
+  NS_LOG_FUNCTION (this);
+
 	InternetStackHelper stack;
   InstallStack(stack);
 }
 
 void AQMTopologyHelper::InstallStack(InternetStackHelper stack)
 {
+  NS_LOG_FUNCTION (this);
+
   stack.Install (m_routers);
   stack.Install (m_leftLeaf);
 }
@@ -91,6 +129,8 @@ void AQMTopologyHelper::InstallStack(InternetStackHelper stack)
 void AQMTopologyHelper::AssignIpv4Addresses (Ipv4AddressHelper leftIp,
                                             Ipv4AddressHelper routerIp)
 {
+  NS_LOG_FUNCTION (this);
+
   m_routerInterfaces = routerIp.Assign (m_routerDevices);
 
   for (uint32_t i = 0; i < LeftCount (); ++i)
@@ -107,11 +147,15 @@ void AQMTopologyHelper::AssignIpv4Addresses (Ipv4AddressHelper leftIp,
 
 void AQMTopologyHelper::InstallTrafficControl(TrafficControlHelper trafficControlHelper)
 {
+  NS_LOG_FUNCTION (this);
+
   m_bottleneckQueueDisc = trafficControlHelper.Install(m_routerDevices.Get(0));
 }
 
 void AQMTopologyHelper::InstallPvPieTrafficControl()
 {
+  NS_LOG_FUNCTION (this);
+
   TrafficControlHelper trafficControlHelper;
   trafficControlHelper.SetRootQueueDisc("ns3::PvPieQueueDisc");
   InstallTrafficControl(trafficControlHelper);
@@ -119,36 +163,42 @@ void AQMTopologyHelper::InstallPvPieTrafficControl()
 
 void AQMTopologyHelper::InstallTlPvPieTrafficControl()
 {
+  NS_LOG_FUNCTION (this);
+
   TrafficControlHelper trafficControlHelper;
   trafficControlHelper.SetRootQueueDisc("ns3::TlPvPieQueueDisc");
   InstallTrafficControl(trafficControlHelper);
 }
 
-void AQMTopologyHelper::InstallPacketMarker(uint32_t i, DelayClass delayClass)
+void AQMTopologyHelper::InstallPacketMarker(uint32_t index, DelayClass delayClass)
 {
-    std::string qdClass;
-    switch(delayClass)
-    {
-      case DelayClass::Gold: qdClass = "Gold"; break;
-      case DelayClass::Silver: qdClass = "Silver"; break;
-      case DelayClass::Background: qdClass = "Background"; break;
-    }
+  NS_LOG_FUNCTION (this << index);
 
-    TrafficControlHelper trafficControlHelper;
-    trafficControlHelper.SetRootQueueDisc("ns3::" + qdClass + "PacketMarkerQueueDisc");
-    QueueDiscContainer qd = trafficControlHelper.Install(m_leftLeafDevices.Get(i));
-    m_leftLeafQueueDiscs.Add(qd);
+  std::string qdClass;
+  switch(delayClass)
+  {
+    case DelayClass::Gold: qdClass = "Gold"; break;
+    case DelayClass::Silver: qdClass = "Silver"; break;
+    case DelayClass::Background: qdClass = "Background"; break;
+  }
 
-    switch(delayClass)
-    {
-      case DelayClass::Gold: m_goldQueueDiscs.Add(qd); break;
-      case DelayClass::Silver: m_silverQueueDiscs.Add(qd); break;
-      case DelayClass::Background: m_backgroundQueueDiscs.Add(qd); break;
-    }
+  TrafficControlHelper trafficControlHelper;
+  trafficControlHelper.SetRootQueueDisc("ns3::" + qdClass + "PacketMarkerQueueDisc");
+  QueueDiscContainer qd = trafficControlHelper.Install(m_leftLeafDevices.Get(index));
+  m_leftLeafQueueDiscs.Add(qd);
+
+  switch(delayClass)
+  {
+    case DelayClass::Gold: m_goldQueueDiscs.Add(qd); break;
+    case DelayClass::Silver: m_silverQueueDiscs.Add(qd); break;
+    case DelayClass::Background: m_backgroundQueueDiscs.Add(qd); break;
+  }
 }
 
 void AQMTopologyHelper::InstallPacketMarkers()
 {
+  NS_LOG_FUNCTION (this);
+
   for ( uint32_t i = 0; i < LeftCount(); ++i )
   {
     InstallPacketMarker(i, m_leafConfigurations[i].GetDelayClass());
@@ -157,41 +207,50 @@ void AQMTopologyHelper::InstallPacketMarkers()
 
 void AQMTopologyHelper::InstallSinkApplication()
 {
+  NS_LOG_FUNCTION (this);
+
   InstallSinkApplication(Seconds(0));
 }
 
 void AQMTopologyHelper::InstallSinkApplication(Time startTime)
 {
+  NS_LOG_FUNCTION (this);
+
   Address sinkLocalAddress(InetSocketAddress(Ipv4Address::GetAny(), m_port));
   PacketSinkHelper TcpPacketSinkHelper("ns3::TcpSocketFactory", sinkLocalAddress);
   m_sinkApp = TcpPacketSinkHelper.Install(GetRight());
   m_sinkApp.Start(startTime);
 }
 
-void AQMTopologyHelper::InstallSourceApplication(uint32_t i,
+void AQMTopologyHelper::InstallSourceApplication(uint32_t index,
                                                  std::string transferProtocolClass,
                                                  IApplicationHelperFactory::APPLICATION_HELPERS applicationHelper,
                                                  Time startTime,
                                                  Time stopTime)
 {
+  NS_LOG_FUNCTION (this);
+
   if (( transferProtocolClass != "ns3::UdpSocketFactory" ) && ( transferProtocolClass != "ns3::TcpSocketFactory" ))
   {
-    std::cout << i << std::endl;
-    std::cout << transferProtocolClass << std::endl;
     throw std::runtime_error("InstallSourceApplicaiton: Transfer protocol class has to be either ns3::UdpSocketFactory or ns3::TcpSocketFactory!");
   }
 
   Address remoteAddress(InetSocketAddress(m_routerInterfaces.GetAddress(1), m_port));
 
   IApplicationHelperFactory *factory = IApplicationHelperFactory::CreateFactory(applicationHelper);
-  ApplicationContainer sourceApp = factory->GetApplicationHelper()->Install(m_leftLeaf.Get(i), transferProtocolClass, remoteAddress);
+  ApplicationContainer sourceApp = factory->GetApplicationHelper()->Install(m_leftLeaf.Get(index), transferProtocolClass, remoteAddress);
   sourceApp.Start(startTime);
-  if ( stopTime > 0 ) { sourceApp.Stop(stopTime); }
+  if ( stopTime > 0 )
+  {
+    sourceApp.Stop(stopTime);
+  }
   m_leftLeafApplications.Add(sourceApp);
 }
 
 void AQMTopologyHelper::InstallSourceApplications()
 {
+  NS_LOG_FUNCTION (this);
+
   for ( uint32_t i = 0; i < LeftCount(); ++i )
   {
     InstallSourceApplication(i, m_leafConfigurations[i].GetTransferProtocolClass(), IApplicationHelperFactory::APPLICATION_HELPERS::ONOFF, m_leafConfigurations[i].GetStartTime(), m_leafConfigurations[i].GetStopTime());
@@ -202,6 +261,11 @@ void AQMTopologyHelper::ConfigureLeaf(DelayClass delayClass,
                                       Time startTime,
                                       Time stopTime)
 {
+
+
+
+  NS_LOG_FUNCTION (this << DelayClassToString(delayClass) << startTime.GetSeconds() << stopTime.GetSeconds());
+
   if ( m_initialized )
   {
     throw std::runtime_error("Cannot add new Leaf after IP addressess are configured!");

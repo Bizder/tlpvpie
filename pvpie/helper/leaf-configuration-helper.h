@@ -7,7 +7,7 @@
 
 namespace ns3 {
 
-enum class DelayClass { Gold, Silver, Background};
+enum class DelayClass { Gold = 0, Silver = 1, Background = 2};
 
 enum class ApplicatonType { Continuous, Bulk };
 

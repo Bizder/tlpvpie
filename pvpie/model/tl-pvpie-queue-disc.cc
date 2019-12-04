@@ -39,60 +39,60 @@
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE("TlPieQueueDisc");
+NS_LOG_COMPONENT_DEFINE("TlPvPieQueueDisc");
 
-NS_OBJECT_ENSURE_REGISTERED(TlPieQueueDisc);
+NS_OBJECT_ENSURE_REGISTERED(TlPvPieQueueDisc);
 
-TypeId TlPieQueueDisc::GetTypeId(void)
+TypeId TlPvPieQueueDisc::GetTypeId(void)
 {
-  static TypeId tid = TypeId ("ns3::TlPieQueueDisc")
+  static TypeId tid = TypeId ("ns3::TlPvPieQueueDisc")
   .SetParent<QueueDisc>()
-  .SetGroupName("TlPie")
-    .AddConstructor<TlPieQueueDisc> ()
+  .SetGroupName("TlPvPie")
+    .AddConstructor<TlPvPieQueueDisc> ()
     .AddAttribute ("MeanPktSize",
                    "Average of packet size",
                    UintegerValue (1000),
-                   MakeUintegerAccessor (&TlPieQueueDisc::m_meanPktSize),
+                   MakeUintegerAccessor (&TlPvPieQueueDisc::m_meanPktSize),
                    MakeUintegerChecker<uint32_t> ())
     .AddAttribute ("A",
                    "Value of alpha",
                    DoubleValue (0.125),
-                   MakeDoubleAccessor (&TlPieQueueDisc::m_a),
+                   MakeDoubleAccessor (&TlPvPieQueueDisc::m_a),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("B",
                    "Value of beta",
                    DoubleValue (1.25),
-                   MakeDoubleAccessor (&TlPieQueueDisc::m_b),
+                   MakeDoubleAccessor (&TlPvPieQueueDisc::m_b),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("F",
                    "Value of phi",
                    DoubleValue (0.125),
-                   MakeDoubleAccessor (&TlPieQueueDisc::m_f),
+                   MakeDoubleAccessor (&TlPvPieQueueDisc::m_f),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("P",
                    "Value of psi",
                    DoubleValue (1.25),
-                   MakeDoubleAccessor (&TlPieQueueDisc::m_p),
+                   MakeDoubleAccessor (&TlPvPieQueueDisc::m_p),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("Tupdate1",
                    "Time period to calculate drop probability",
                    TimeValue (Seconds (0.03)),
-                   MakeTimeAccessor (&TlPieQueueDisc::m_tUpdate1),
+                   MakeTimeAccessor (&TlPvPieQueueDisc::m_tUpdate1),
                    MakeTimeChecker ())
     .AddAttribute ("Supdate1",
                    "Start time of the probability update timer",
                    TimeValue (Seconds (0)),
-                   MakeTimeAccessor (&TlPieQueueDisc::m_sUpdate1),
+                   MakeTimeAccessor (&TlPvPieQueueDisc::m_sUpdate1),
                    MakeTimeChecker ())
     .AddAttribute ("Tupdate2",
                    "Time period to calculate threshold value",
                    TimeValue (Seconds (0.01)),
-                   MakeTimeAccessor (&TlPieQueueDisc::m_tUpdate2),
+                   MakeTimeAccessor (&TlPvPieQueueDisc::m_tUpdate2),
                    MakeTimeChecker())
     .AddAttribute ("Supdate2",
                    "Start time of the value update timer",
                    TimeValue (Seconds (0)),
-                   MakeTimeAccessor (&TlPieQueueDisc::m_sUpdate2),
+                   MakeTimeAccessor (&TlPvPieQueueDisc::m_sUpdate2),
                    MakeTimeChecker ())
     .AddAttribute ("MaxSize",
                    "The maximum number of packets accepted by this queue disc",
@@ -103,66 +103,66 @@ TypeId TlPieQueueDisc::GetTypeId(void)
     .AddAttribute ("DequeueThreshold",
                    "Minimum queue size in bytes before dequeue rate is measured",
                    UintegerValue (10000),
-                   MakeUintegerAccessor (&TlPieQueueDisc::m_dqThreshold),
+                   MakeUintegerAccessor (&TlPvPieQueueDisc::m_dqThreshold),
                    MakeUintegerChecker<uint32_t> ())
     .AddAttribute ("QueueDelayReference",
                    "Desired queue delay",
                    TimeValue (Seconds (0.02)),
-                   MakeTimeAccessor (&TlPieQueueDisc::m_qDelayRef),
+                   MakeTimeAccessor (&TlPvPieQueueDisc::m_qDelayRef),
                    MakeTimeChecker ())
     .AddAttribute ("MaxBurstAllowance",
                    "Current max burst allowance in seconds before random drop",
                    TimeValue (Seconds (0.1)),
-                   MakeTimeAccessor (&TlPieQueueDisc::m_maxBurst),
+                   MakeTimeAccessor (&TlPvPieQueueDisc::m_maxBurst),
                    MakeTimeChecker ())
     .AddAttribute("DropDelta",
                    "Droprate measurement time limit",
                    DoubleValue(1.0),
-                   MakeDoubleAccessor (&TlPieQueueDisc::m_drop_timedelta),
+                   MakeDoubleAccessor (&TlPvPieQueueDisc::m_drop_timedelta),
                    MakeDoubleChecker<double> ())
     .AddAttribute("VMin",
                    "Droprate measurement time limit",
                    IntegerValue(0),
-                   MakeIntegerAccessor(&TlPieQueueDisc::m_vmin),
+                   MakeIntegerAccessor(&TlPvPieQueueDisc::m_vmin),
                    MakeIntegerChecker<int32_t> ())
     .AddAttribute("VMax",
                    "Droprate measurement time limit",
                    IntegerValue(4294967295),
-                   MakeIntegerAccessor(&TlPieQueueDisc::m_vmax),
+                   MakeIntegerAccessor(&TlPvPieQueueDisc::m_vmax),
                    MakeIntegerChecker<int32_t> ())
     .AddTraceSource("QueueingDelay",
                   "Queueing Delay",
-                  MakeTraceSourceAccessor(&TlPieQueueDisc::m_qDelay),
+                  MakeTraceSourceAccessor(&TlPvPieQueueDisc::m_qDelay),
                   "ns3::Time::TracedValueCallback")
     .AddTraceSource("Probability",
                   "Probability of packet droping",
-                  MakeTraceSourceAccessor(&TlPieQueueDisc::m_dropProb),
+                  MakeTraceSourceAccessor(&TlPvPieQueueDisc::m_dropProb),
                   "ns3::TracedValueCallback::Double")
     .AddTraceSource("ThresholdValue",
                   "Threshold Value of packet droping",
-                  MakeTraceSourceAccessor(&TlPieQueueDisc::m_thresholdValue),
+                  MakeTraceSourceAccessor(&TlPvPieQueueDisc::m_thresholdValue),
                   "ns3::TracedValueCallback::UInteger")
   ;
 
   return tid;
 }
 
-TlPieQueueDisc::TlPieQueueDisc ()
+TlPvPieQueueDisc::TlPvPieQueueDisc ()
   : QueueDisc ()
 {
   NS_LOG_FUNCTION (this);
   m_uv = CreateObject<UniformRandomVariable> ();
-  m_rtrsEvent_p = Simulator::Schedule (m_sUpdate1, &TlPieQueueDisc::CalculateP, this);
-  m_rtrsEvent_v = Simulator::Schedule (m_sUpdate2, &TlPieQueueDisc::CalculateV, this);
+  m_rtrsEvent_p = Simulator::Schedule (m_sUpdate1, &TlPvPieQueueDisc::CalculateP, this);
+  m_rtrsEvent_v = Simulator::Schedule (m_sUpdate2, &TlPvPieQueueDisc::CalculateV, this);
 }
 
-TlPieQueueDisc::~TlPieQueueDisc ()
+TlPvPieQueueDisc::~TlPvPieQueueDisc ()
 {
   NS_LOG_FUNCTION (this);
 }
 
 void
-TlPieQueueDisc::DoDispose (void)
+TlPvPieQueueDisc::DoDispose (void)
 {
   NS_LOG_FUNCTION (this);
   m_uv = 0;
@@ -172,14 +172,14 @@ TlPieQueueDisc::DoDispose (void)
 }
 
 Time
-TlPieQueueDisc::GetQueueDelay (void)
+TlPvPieQueueDisc::GetQueueDelay (void)
 {
   NS_LOG_FUNCTION (this);
   return m_qDelay;
 }
 
 int64_t
-TlPieQueueDisc::AssignStreams (int64_t stream)
+TlPvPieQueueDisc::AssignStreams (int64_t stream)
 {
   NS_LOG_FUNCTION (this << stream);
   m_uv->SetStream (stream);
@@ -187,7 +187,7 @@ TlPieQueueDisc::AssignStreams (int64_t stream)
 }
 
 bool
-TlPieQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
+TlPvPieQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 {
   NS_LOG_FUNCTION (this << item);
 
@@ -222,7 +222,7 @@ TlPieQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 }
 
 void
-TlPieQueueDisc::InitializeParams (void)
+TlPvPieQueueDisc::InitializeParams (void)
 {
   // Initially queue is empty so variables are initialize to zero except m_dqCount
   m_inMeasurement = false;
@@ -235,7 +235,7 @@ TlPieQueueDisc::InitializeParams (void)
   m_dropProbOld = 0;
 }
 
-bool TlPieQueueDisc::DropEarly (Ptr<QueueDiscItem> item, uint32_t qSize)
+bool TlPvPieQueueDisc::DropEarly (Ptr<QueueDiscItem> item, uint32_t qSize)
 {
   NS_LOG_FUNCTION (this << item << qSize);
   if (m_burstAllowance.GetSeconds () > 0)
@@ -271,7 +271,7 @@ bool TlPieQueueDisc::DropEarly (Ptr<QueueDiscItem> item, uint32_t qSize)
   return tag.GetPacketValue() < m_thresholdValue;
 }
 
-void TlPieQueueDisc::CalculateP()
+void TlPvPieQueueDisc::CalculateP()
 {
   NS_LOG_FUNCTION (this);
   Time qDelay;
@@ -383,11 +383,11 @@ void TlPieQueueDisc::CalculateP()
 
   m_qDelayOld = qDelay;
 
-  m_rtrsEvent_p = Simulator::Schedule (m_tUpdate1, &TlPieQueueDisc::CalculateP, this);
+  m_rtrsEvent_p = Simulator::Schedule (m_tUpdate1, &TlPvPieQueueDisc::CalculateP, this);
 
 }
 
-void TlPieQueueDisc::CalculateV()
+void TlPvPieQueueDisc::CalculateV()
 {
   NS_LOG_FUNCTION (this);
 
@@ -418,12 +418,12 @@ void TlPieQueueDisc::CalculateV()
     m_thresholdValue = 0;
   }
 
-  m_rtrsEvent_v = Simulator::Schedule (m_tUpdate2, &TlPieQueueDisc::CalculateV, this);
+  m_rtrsEvent_v = Simulator::Schedule (m_tUpdate2, &TlPvPieQueueDisc::CalculateV, this);
 }
 
 
 Ptr<QueueDiscItem>
-TlPieQueueDisc::DoDequeue ()
+TlPvPieQueueDisc::DoDequeue ()
 {
   NS_LOG_FUNCTION (this);
 
@@ -488,18 +488,18 @@ TlPieQueueDisc::DoDequeue ()
 }
 
 bool
-TlPieQueueDisc::CheckConfig (void)
+TlPvPieQueueDisc::CheckConfig (void)
 {
   NS_LOG_FUNCTION (this);
   if (GetNQueueDiscClasses () > 0)
     {
-      NS_LOG_ERROR ("TlPieQueueDisc cannot have classes");
+      NS_LOG_ERROR ("TlPvPieQueueDisc cannot have classes");
       return false;
     }
 
   if (GetNPacketFilters () > 0)
     {
-      NS_LOG_ERROR ("TlPieQueueDisc cannot have packet filters");
+      NS_LOG_ERROR ("TlPvPieQueueDisc cannot have packet filters");
       return false;
     }
 
@@ -512,7 +512,7 @@ TlPieQueueDisc::CheckConfig (void)
 
   if (GetNInternalQueues () != 1)
     {
-      NS_LOG_ERROR ("TlPieQueueDisc needs 1 internal queue");
+      NS_LOG_ERROR ("TlPvPieQueueDisc needs 1 internal queue");
       return false;
     }
 
@@ -520,7 +520,7 @@ TlPieQueueDisc::CheckConfig (void)
 }
 
 
-double TlPieQueueDisc::GetRealDropRate()
+double TlPvPieQueueDisc::GetRealDropRate()
 {
   RemoveOldValues();
 
@@ -538,7 +538,7 @@ double TlPieQueueDisc::GetRealDropRate()
   return double(dropCount) / double(m_droprecord.size());
 }
 
-void TlPieQueueDisc::RemoveOldValues()
+void TlPvPieQueueDisc::RemoveOldValues()
 {
   double now = Simulator::Now().GetSeconds();
   double start = now - m_drop_timedelta;
@@ -555,7 +555,7 @@ void TlPieQueueDisc::RemoveOldValues()
   m_droprecord.erase(m_droprecord.begin(),m_droprecord.begin()+threshold_index);
 }
 
-void TlPieQueueDisc::AddDrop(double time, bool dropped)
+void TlPvPieQueueDisc::AddDrop(double time, bool dropped)
 {
   m_droprecord.push_back(DropRecord(time, dropped));
 }

@@ -7,7 +7,7 @@
 #include "ns3/traffic-control-module.h"
 #include "ns3/flow-monitor-helper.h"
 #include "ns3/ipv4-flow-classifier.h"
-#include "ns3/pvpie-queue-disc.h"
+#include "ns3/tl-pvpie-queue-disc.h"
 #include "ns3/packet-value-tag.h"
 #include "ns3/packet-marker-queue-disc.h"
 #include "ns3/aqm-topology-helper.h"
@@ -17,7 +17,7 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE ("PvPieSimulator");
+NS_LOG_COMPONENT_DEFINE ("TlPvPieSimulator");
 
 int main (int argc, char *argv[])
 {
@@ -28,7 +28,7 @@ int main (int argc, char *argv[])
 
     float stopTime = 150.0;
     unsigned int packetSize = 1000;
-	
+
     int nGold = 3;
     int nSilver = 3;
     int nBackground = 0;
@@ -45,14 +45,22 @@ int main (int argc, char *argv[])
     std::string accessBandwidth = "10Mbps";
     std::string accessDelay = "2ms";
 
-    ns3::Config::SetDefault("ns3::PvPieQueueDisc::MaxSize", ns3::QueueSizeValue(QueueSize ("200kB")));
-    ns3::Config::SetDefault("ns3::PvPieQueueDisc::MeanPktSize", ns3::UintegerValue(packetSize));
-    ns3::Config::SetDefault("ns3::PvPieQueueDisc::QueueDelayReference", ns3::StringValue("20ms"));
-    ns3::Config::SetDefault("ns3::PvPieQueueDisc::DequeueThreshold", ns3::UintegerValue(10000));
+	ns3::Config::SetDefault("ns3::TlPvPieQueueDisc::MaxSize", ns3::QueueSizeValue(QueueSize ("200kB")));
+	ns3::Config::SetDefault("ns3::TlPvPieQueueDisc::MeanPktSize", ns3::UintegerValue(packetSize));
+	ns3::Config::SetDefault("ns3::TlPvPieQueueDisc::QueueDelayReference", ns3::StringValue("20ms"));
+	ns3::Config::SetDefault("ns3::TlPvPieQueueDisc::DequeueThreshold", ns3::UintegerValue(10000));
 
-    ns3::Config::SetDefault("ns3::PvPieQueueDisc::Tupdate", ns3::TimeValue(ns3::MilliSeconds(100)));
-    ns3::Config::SetDefault("ns3::PvPieQueueDisc::A", ns3::DoubleValue(0.125));
-    ns3::Config::SetDefault("ns3::PvPieQueueDisc::B", ns3::DoubleValue(1.25));
+	ns3::Config::SetDefault("ns3::TlPvPieQueueDisc::Tupdate1", ns3::TimeValue(ns3::MilliSeconds(100)));
+	ns3::Config::SetDefault("ns3::TlPvPieQueueDisc::A", ns3::DoubleValue(0.125));
+	ns3::Config::SetDefault("ns3::TlPvPieQueueDisc::B", ns3::DoubleValue(1.25));
+
+	ns3::Config::SetDefault("ns3::TlPvPieQueueDisc::Tupdate2", ns3::TimeValue(ns3::MilliSeconds(10)));
+	ns3::Config::SetDefault("ns3::TlPvPieQueueDisc::F", ns3::DoubleValue(0.125));
+	ns3::Config::SetDefault("ns3::TlPvPieQueueDisc::P", ns3::DoubleValue(.125));
+	ns3::Config::SetDefault("ns3::TlPvPieQueueDisc::DropDelta", ns3::DoubleValue(0.3));
+
+	ns3::Config::SetDefault("ns3::TlPvPieQueueDisc::VMin", ns3::IntegerValue(0));
+	ns3::Config::SetDefault("ns3::TlPvPieQueueDisc::VMax", ns3::IntegerValue(500000000));
 
     ns3::Config::SetDefault ("ns3::OnOffApplication::PacketSize", ns3::UintegerValue(packetSize));
     ns3::Config::SetDefault ("ns3::OnOffApplication::DataRate", ns3::StringValue("10Mbps"));
@@ -88,20 +96,20 @@ int main (int argc, char *argv[])
 
     topology.Initialize();
     topology.InstallStack();
-    topology.InstallPvPieTrafficControl();
+    topology.InstallTlPvPieTrafficControl();
     topology.InstallPacketMarkers();
     topology.AssignIpv4Addresses(ns3::Ipv4AddressHelper("99.9.1.0", "255.255.255.0"),
                        ns3::Ipv4AddressHelper("10.1.1.0", "255.255.255.0"));
     topology.InstallSinkApplication();
     topology.InstallSourceApplications();
 
-    /******************************************** Logging ********************************************/
+    // /******************************************** Logging ********************************************/
     // bottleNeckLink.EnablePcap(OUTPUT_FOLDER + "/pcap/BN_", routers.Get(0)->GetId(), 0);
 
     ns3::AsciiTraceHelper asciiTraceHelper;
 
     ns3::Ptr<ns3::QueueDisc> qd = topology.m_bottleneckQueueDisc.Get(0);
-    ns3::Ptr<ns3::PvPieQueueDisc> pqd = ns3::DynamicCast<ns3::PvPieQueueDisc>(qd);
+    ns3::Ptr<ns3::TlPvPieQueueDisc> pqd = ns3::DynamicCast<ns3::TlPvPieQueueDisc>(qd);
 
     ns3::Ptr<ns3::OutputStreamWrapper> dropProbStream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/p.bn");
     pqd->TraceConnectWithoutContext ("Probability", ns3::MakeBoundCallback(&DropProbabilityTrace, dropProbStream));
@@ -110,8 +118,8 @@ int main (int argc, char *argv[])
     ns3::Ptr<ns3::OutputStreamWrapper> tvStream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/tv.bn");
     pqd->TraceConnectWithoutContext ("ThresholdValue", ns3::MakeBoundCallback(&ThresholdValueTrace, tvStream));
 
-    ns3::Ptr<ns3::OutputStreamWrapper> eCDFstream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/ecdf.bn");
-    for ( int i = 0; i < stopTime ; i = i + 15 ) { ns3::Simulator::Schedule( ns3::Seconds(0), &ecdfTrace, eCDFstream, pqd); }
+    // ns3::Ptr<ns3::OutputStreamWrapper> eCDFstream = asciiTraceHelper.CreateFileStream (OUTPUT_FOLDER + "ascii/ecdf.bn");
+    // for ( int i = 0; i < stopTime ; i = i + 15 ) { ns3::Simulator::Schedule( ns3::Seconds(0), &ecdfTrace, eCDFstream, pqd); }
 
     std::vector< ns3::Ptr<ns3::OutputStreamWrapper> > flowStreams;
     for ( int i = 0 ; i < nClients ; ++i )
@@ -150,7 +158,7 @@ int main (int argc, char *argv[])
 
     ns3::Simulator::Schedule( ns3::Seconds(1.0), &TimeTrace);
 
-	/******************************************** Simulator ********************************************/
+	// /******************************************** Simulator ********************************************/
     ns3::Ipv4GlobalRoutingHelper::PopulateRoutingTables();
     ns3::Simulator::Stop(ns3::Seconds(stopTime));
     ns3::Simulator::Run ();

@@ -25,8 +25,8 @@
  * Most of the comments are also ported from the same.
  */
 
-#ifndef TLPIE_QUEUE_DISC_H
-#define TLPIE_QUEUE_DISC_H
+#ifndef TLPVPIE_QUEUE_DISC_H
+#define TLPVPIE_QUEUE_DISC_H
 
 #include "ns3/queue-disc.h"
 #include "ns3/nstime.h"
@@ -57,7 +57,7 @@ class UniformRandomVariable;
  *
  * \brief Implements PIE Active Queue Management discipline
  */
-class TlPieQueueDisc : public QueueDisc
+class TlPvPieQueueDisc : public QueueDisc
 {
 public:
   /**
@@ -67,14 +67,14 @@ public:
   static TypeId GetTypeId (void);
 
   /**
-   * \brief TlPieQueueDisc Constructor
+   * \brief TlPvPieQueueDisc Constructor
    */
-  TlPieQueueDisc ();
+  TlPvPieQueueDisc ();
 
   /**
-   * \brief TlPieQueueDisc Destructor
+   * \brief TlPvPieQueueDisc Destructor
    */
-  virtual ~TlPieQueueDisc ();
+  virtual ~TlPvPieQueueDisc ();
 
   /**
    * \brief Burst types
@@ -185,5 +185,5 @@ private:
 
 };   // namespace ns3
 
-#endif
+#endif /* TLPVPIE_QUEUE_DISC_H */
 

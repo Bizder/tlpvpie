@@ -5,12 +5,12 @@
 #include "ns3/flow-monitor-helper.h"
 #include "ns3/packet-value-tag.h"
 #include "ns3/packet-marker-queue-disc.h"
+#include "ns3/pvpie-queue-disc.h"
 #include <vector>
 
 
 namespace ns3
 {
-
     uint32_t receivedPackets = 0;
     uint32_t goldPackets = 0;
     uint32_t silverPackets = 0;
