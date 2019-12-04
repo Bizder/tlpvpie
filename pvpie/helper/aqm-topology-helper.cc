@@ -87,6 +87,7 @@ Ptr<Node> AQMTopologyHelper::GetRight () const
 uint32_t  AQMTopologyHelper::LeftCount () const
 {
   NS_LOG_FUNCTION (this);
+  // NS_LOG_DEBUG(m_leafConfigurations.size());
 
   return m_leafConfigurations.size();
 }

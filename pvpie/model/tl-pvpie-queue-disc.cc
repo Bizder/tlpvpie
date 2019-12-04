@@ -391,12 +391,11 @@ void TlPvPieQueueDisc::CalculateV()
 {
   NS_LOG_FUNCTION (this);
 
-  // m_dropProb
   double m_dropProbCurr = GetRealDropRate();
 
-  double m_pDelta = m_dropProb - m_dropProbCurr;
+  double m_pDelta_ref = m_dropProb - m_dropProbCurr;
   double m_pDeltaCurr = m_dropProbOld - m_dropProbCurr;
-  int32_t m_thresholdValue_new = m_thresholdValue + m_f * m_pDelta * (m_vmax - m_vmin) + m_p * m_pDeltaCurr * (m_vmax - m_vmin);
+  int32_t m_thresholdValue_new = m_thresholdValue + m_f * m_pDelta_ref * (m_vmax - m_vmin) + m_p * m_pDeltaCurr * (m_vmax - m_vmin);
 
   if ( m_thresholdValue_new > m_vmax )
   {
